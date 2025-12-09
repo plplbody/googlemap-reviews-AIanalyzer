@@ -9,9 +9,18 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@google-cloud/tasks": "^6.2.1",
+    "@google-cloud/vertexai": "^1.10.0",
+    "clsx": "^2.1.1",
+    "firebase": "^12.6.0",
+    "firebase-admin": "^13.6.0",
+    "google-auth-library": "^10.5.0",
+    "lucide-react": "^0.555.0",
     "next": "16.0.5",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "recharts": "^3.5.1",
+    "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

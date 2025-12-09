@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Google Map Review Analysis App
 
-## Getting Started
+A high-precision analysis application for Google Map reviews using Vertex AI (Gemini).
 
-First, run the development server:
+## Environment Setup
+
+### Prerequisites
+- Docker & Docker Compose
+- Node.js (for local script execution)
+
+### Starting the Application
+To start the application and the Firestore emulator, run:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+docker-compose up
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **App**: http://localhost:3001
+- **Firestore Emulator**: localhost:8080
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Restarting the App
+If you make changes to the code, you may need to restart the app container:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+docker-compose restart app
+```
 
-## Learn More
+## Data Inspection
 
-To learn more about Next.js, take a look at the following resources:
+To inspect the data stored in the local Firestore emulator, use the provided utility script.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Run Inspection Script
+```bash
+npx -y tsx inspect_db.ts
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+This will output the list of analyzed places, including their status, AI scores, and usage summaries.
 
-## Deploy on Vercel
+## Tech Stack
+- **Frontend**: Next.js, Tailwind CSS, Recharts
+- **Backend**: Next.js Server Actions
+- **AI**: Google Vertex AI (Gemini 2.0 Flash)
+- **Database**: Firestore (Emulator for local dev)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
