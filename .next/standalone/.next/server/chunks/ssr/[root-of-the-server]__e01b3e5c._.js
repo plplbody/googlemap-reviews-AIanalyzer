@@ -1,0 +1,3 @@
+module.exports=[37500,a=>{a.v({className:"shippori_mincho_8ab9f399-module__--8agW__className"})},27572,a=>{"use strict";var b=a.i(7997),c=a.i(37500);let d={className:c.default.className,style:{fontFamily:"'Shippori Mincho', 'Shippori Mincho Fallback'",fontStyle:"normal"}};function e({children:a}){return(0,b.jsx)("html",{lang:"ja",suppressHydrationWarning:!0,children:(0,b.jsx)("body",{className:`${d.className} antialiased`,children:a})})}null!=c.default.variable&&(d.variable=c.default.variable),a.s(["default",()=>e,"metadata",0,{title:"True Review - Google Map Analysis",description:"AI-powered Google Map review analysis"}],27572)}];
+
+//# sourceMappingURL=%5Broot-of-the-server%5D__e01b3e5c._.js.map

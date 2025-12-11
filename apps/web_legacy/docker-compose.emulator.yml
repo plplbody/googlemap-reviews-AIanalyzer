@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  firebase:
+    image: google/cloud-sdk:470.0.0-alpine
+    container_name: firebase-emulator
+    ports:
+      - "8080:8080"
+      - "4000:4000"
+    volumes:
+      - ./firebase-data:/firebase-data
+    command: >
+      /bin/sh -c "
+      apk add --no-cache openjdk21-jre &&
+      gcloud components install cloud-firestore-emulator beta --quiet &&
+      gcloud beta emulators firestore start --host-port=0.0.0.0:8080 --rules=/firebase-data/firestore.rules
+      "
+    # Create the rules file if not mounting a full project
+    # simplified for just basic emulator start
