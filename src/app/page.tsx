@@ -6,7 +6,7 @@ import { doc, onSnapshot } from "firebase/firestore";
 import { firestore } from "@/lib/firebase/client";
 import SearchInput from "@/components/ui/SearchInput";
 import AnalysisResult from "@/components/AnalysisResult";
-import ListingCard from "@/components/ui/ListingCard";
+
 import PlaceList from "@/components/PlaceList";
 import { Place } from "@/types/schema";
 import {
@@ -17,50 +17,7 @@ import {
 import { useRealtimePlaces } from "@/hooks/useRealtimePlaces";
 import { Utensils, Award, Sparkles, TrendingUp, ArrowLeft, Heart, ListFilter, Star } from "lucide-react";
 
-// プレミアム表示用のモックデータ（デモ用）
-// 実際のアプリではデータベースから取得しますが、ここでは固定データを使用しています
-const FEATURED_PLACES = [
-  {
-    id: "1",
-    title: "鮨 銀座 おのでら",
-    location: "東京都中央区銀座",
-    rating: 4.85,
-    price: "¥30,000~",
-    imageUrl:
-      "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?q=80&w=1470&auto=format&fit=crop",
-    tags: ["寿司", "ミシュラン", "個室あり"],
-  },
-  {
-    id: "2",
-    title: "L'Effervescence",
-    location: "東京都港区西麻布",
-    rating: 4.92,
-    price: "¥50,000~",
-    imageUrl:
-      "https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=1374&auto=format&fit=crop",
-    tags: ["フレンチ", "隠れ家", "記念日"],
-  },
-  {
-    id: "3",
-    title: "鳥しき",
-    location: "東京都品川区上大崎",
-    rating: 4.75,
-    price: "¥15,000~",
-    imageUrl:
-      "https://images.unsplash.com/photo-1625937751876-4515cd8e7752?q=80&w=1374&auto=format&fit=crop",
-    tags: ["焼き鳥", "予約困難", "カウンター"],
-  },
-  {
-    id: "4",
-    title: "NARISAWA",
-    location: "東京都港区南青山",
-    rating: 4.88,
-    price: "¥45,000~",
-    imageUrl:
-      "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=1470&auto=format&fit=crop",
-    tags: ["イノベーティブ", "自然派", "世界の名店"],
-  },
-];
+
 
 type ViewState = "HOME" | "LIST" | "DETAIL";
 
@@ -86,6 +43,10 @@ function HomeContent() {
     const focusParam = searchParams.get("focus");
     return focusParam ? focusParam.split(",") : [];
   });
+  const [focusedScenes, setFocusedScenes] = useState<string[]>(() => {
+    const sceneParam = searchParams.get("scenes");
+    return sceneParam ? sceneParam.split(",") : [];
+  });
 
   // Realtime Data Hook
   const { places: realtimePlaces } = useRealtimePlaces(searchResults.map(p => p.id));
@@ -110,17 +71,32 @@ function HomeContent() {
 
     // 2. Score Helper
     const getMatchScore = (p: Place) => {
-      if (!p.axisScores || focusedAxes.length === 0) return -1;
+      if (!p.axisScores || (focusedAxes.length === 0 && focusedScenes.length === 0)) return -1;
       const scores = p.axisScores;
+      const usage = p.usageScores || {};
+
       const axesMap: Record<string, number> = {
         'taste': scores.taste, 'service': scores.service, 'atmosphere': scores.atmosphere, 'cost': scores.cost
       };
       let total = 0, weight = 0;
+
+      // Standard Axes
       ['taste', 'service', 'atmosphere', 'cost'].forEach(ax => {
         const w = focusedAxes.includes(ax) ? 3 : 1;
         total += (axesMap[ax] || 0) * w;
         weight += w;
       });
+
+      // Usage Scenarios
+      ['business', 'date', 'solo', 'family', 'group'].forEach(scene => {
+        if (focusedScenes.includes(scene)) {
+          const score = usage[scene as keyof typeof usage] || 0;
+          const w = 3;
+          total += score * w;
+          weight += w;
+        }
+      });
+
       return total / weight;
     };
 
@@ -146,26 +122,22 @@ function HomeContent() {
     });
   })();
 
-  // Update Sort when Focused Axes change
+  // Update Sort when Focused Axes/Scenes change
   useEffect(() => {
-    if (focusedAxes.length > 0) {
+    if (focusedAxes.length > 0 || focusedScenes.length > 0) {
       setSortBy('match');
     } else {
-      // If we were sorting by match and axes become empty, fallback to AI
+      // If we were sorting by match and axes/scenes become empty, fallback to AI
       if (sortBy === 'match') setSortBy('ai');
     }
-  }, [focusedAxes.length]);
+  }, [focusedAxes.length, focusedScenes.length]);
 
   const handleAxisToggle = (axisId: string) => {
     let newAxes: string[];
     if (focusedAxes.includes(axisId)) {
       newAxes = focusedAxes.filter(id => id !== axisId);
     } else {
-      if (focusedAxes.length >= 2) {
-        newAxes = focusedAxes; // Max 2 selected
-      } else {
-        newAxes = [...focusedAxes, axisId];
-      }
+      newAxes = [...focusedAxes, axisId];
     }
 
     setFocusedAxes(newAxes);
@@ -180,14 +152,42 @@ function HomeContent() {
     router.replace(`?${params.toString()}`, { scroll: false });
   };
 
+  const handleSceneToggle = (sceneId: string) => {
+    let newScenes: string[];
+    if (focusedScenes.includes(sceneId)) {
+      newScenes = focusedScenes.filter(id => id !== sceneId);
+    } else {
+      newScenes = [...focusedScenes, sceneId];
+    }
+
+    setFocusedScenes(newScenes);
+
+    // Sync to URL
+    const params = new URLSearchParams(searchParams.toString());
+    if (newScenes.length > 0) {
+      params.set("scenes", newScenes.join(","));
+    } else {
+      params.delete("scenes");
+    }
+    router.replace(`?${params.toString()}`, { scroll: false });
+  };
+
   // Also sync state if URL changes externally (e.g. back button)
   useEffect(() => {
     const focusParam = searchParams.get("focus");
     const axes = focusParam ? focusParam.split(",") : [];
-    // Only update if different to avoid excess renders/loops
+
+    const sceneParam = searchParams.get("scenes");
+    const scenes = sceneParam ? sceneParam.split(",") : [];
+
     setFocusedAxes(prev => {
       if (prev.length === axes.length && prev.every(v => axes.includes(v))) return prev;
       return axes;
+    });
+
+    setFocusedScenes(prev => {
+      if (prev.length === scenes.length && prev.every(v => scenes.includes(v))) return prev;
+      return scenes;
     });
   }, [searchParams]);
 
@@ -286,6 +286,9 @@ function HomeContent() {
     // 重視ポイントも詳細画面へ引き継ぐ
     if (focusedAxes.length > 0) {
       params.set("focus", focusedAxes.join(","));
+    }
+    if (focusedScenes.length > 0) {
+      params.set("scenes", focusedScenes.join(","));
     }
 
     router.push(`/?${params.toString()}`);
@@ -398,33 +401,7 @@ function HomeContent() {
             </div>
           </section>
 
-          {/* 厳選されたコレクション */}
-          <section className="py-24 bg-[#FAFAFA]">
-            <div className="container mx-auto px-6">
-              <div className="flex justify-between items-end mb-12">
-                <div>
-                  <h2 className="text-3xl font-bold mb-2">Curated Selection</h2>
-                  <p className="text-gray-500 font-sans">
-                    AIが高く評価した、今行くべき名店
-                  </p>
-                </div>
-                <button className="text-[#E65100] font-sans font-medium hover:underline">
-                  View All
-                </button>
-              </div>
 
-              {/* 幅が300px以上確保できる限り横に並べ、無理なら折り返す設定 */}
-              <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-4">
-                {FEATURED_PLACES.map((item) => (
-                  <ListingCard
-                    key={item.id}
-                    {...item}
-                    onClick={() => console.log("Clicked", item.title)}
-                  />
-                ))}
-              </div>
-            </div>
-          </section>
         </>
       )}
 
@@ -448,8 +425,10 @@ function HomeContent() {
               </div>
 
               {/* Axis Selection UI */}
-              <div className="flex flex-col items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-500">
-                <p className="text-sm text-slate-500 font-medium">重視するポイントを最大2つ選択してください。あなたへのマッチ度を計算します。</p>
+              <div className="flex flex-col items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                <p className="text-sm text-slate-500 font-medium">重視するポイントや利用シーンを選択してください。あなたへのマッチ度を計算します。</p>
+
+                {/* 1. Axes */}
                 <div className="flex flex-wrap gap-2 justify-center">
                   {[
                     { id: 'taste', label: '味・料理', icon: Utensils },
@@ -476,6 +455,34 @@ function HomeContent() {
                     );
                   })}
                 </div>
+
+                {/* 2. Scenarios */}
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {[
+                    { id: 'business', label: 'ビジネス' },
+                    { id: 'date', label: 'デート' },
+                    { id: 'solo', label: 'お一人様' },
+                    { id: 'family', label: 'ファミリー' },
+                    { id: 'group', label: '団体' },
+                  ].map((scene) => {
+                    const isSelected = focusedScenes.includes(scene.id);
+                    return (
+                      <button
+                        key={scene.id}
+                        onClick={() => handleSceneToggle(scene.id)}
+                        className={`
+                              flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-bold transition-all duration-300 border
+                              ${isSelected
+                            ? 'bg-rose-600 text-white border-rose-600 shadow-md transform scale-105'
+                            : 'bg-white text-slate-500 border-slate-200 hover:border-rose-600 hover:text-rose-600'
+                          }
+                            `}
+                      >
+                        {scene.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Sort Controls */}
@@ -484,12 +491,12 @@ function HomeContent() {
                 <div className="bg-white p-1 rounded-full border border-slate-200 flex shadow-sm">
                   <button
                     onClick={() => setSortBy('match')}
-                    disabled={focusedAxes.length === 0}
+                    disabled={focusedAxes.length === 0 && focusedScenes.length === 0}
                     className={`
                             px-4 py-1.5 rounded-full text-sm font-bold transition-all flex items-center gap-1
                             ${sortBy === 'match'
                         ? 'bg-[#E65100] text-white shadow-sm'
-                        : focusedAxes.length === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-500 hover:bg-slate-50 hover:text-[#E65100]'
+                        : (focusedAxes.length === 0 && focusedScenes.length === 0) ? 'text-slate-300 cursor-not-allowed' : 'text-slate-500 hover:bg-slate-50 hover:text-[#E65100]'
                       }
                           `}
                   >
@@ -533,6 +540,7 @@ function HomeContent() {
             hasMore={!!nextPageToken}
             loadingMore={loadingMore}
             focusedAxes={focusedAxes}
+            focusedScenes={focusedScenes}
           />
         </div>
       )}
@@ -550,7 +558,9 @@ function HomeContent() {
           <AnalysisResult
             place={place}
             focusedAxes={focusedAxes}
+            focusedScenes={focusedScenes}
             onToggleAxis={handleAxisToggle}
+            onToggleScene={handleSceneToggle}
           />
         </div>
       )}

@@ -7,14 +7,17 @@ import { useState, useEffect } from 'react';
 import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 import { Loader2, Star, TrendingUp, DollarSign, Coffee, Smile, MapPin, Briefcase, Heart, User, Users, Award, RefreshCw, Map, Utensils, Wine, Accessibility, CreditCard, Check, X, Sparkles } from 'lucide-react';
 import { PlaceBadges } from '@/components/PlaceBadges';
+import { HotPepperCredit } from '@/components/HotPepperCredit';
 
 interface AnalysisResultProps {
     place: Place;
     focusedAxes?: string[];
+    focusedScenes?: string[];
     onToggleAxis?: (axis: string) => void;
+    onToggleScene?: (scene: string) => void;
 }
 
-export default function AnalysisResult({ place, focusedAxes = [], onToggleAxis }: AnalysisResultProps) {
+export default function AnalysisResult({ place, focusedAxes = [], focusedScenes = [], onToggleAxis, onToggleScene }: AnalysisResultProps) {
     const [activeTab, setActiveTab] = useState<'evaluation' | 'map'>('evaluation');
     const [apiKey, setApiKey] = useState('');
     const [isRetrying, setIsRetrying] = useState(false);
@@ -64,9 +67,10 @@ export default function AnalysisResult({ place, focusedAxes = [], onToggleAxis }
 
     // Personalized Score Calculation
     const calculatePersonalizedScore = () => {
-        if (!place.axisScores || focusedAxes.length === 0) return null;
+        if (!place.axisScores || (focusedAxes.length === 0 && focusedScenes.length === 0)) return null;
 
         const scores = place.axisScores;
+        const usage = place.usageScores || {};
         let totalScore = 0;
         let totalWeight = 0;
 
@@ -77,11 +81,23 @@ export default function AnalysisResult({ place, focusedAxes = [], onToggleAxis }
             'cost': scores.cost
         };
 
+        // Standard Axes (Always included: Weight 1 or 3)
         ['taste', 'service', 'atmosphere', 'cost'].forEach(axis => {
             const score = axesMap[axis] || 0;
             const weight = focusedAxes.includes(axis) ? 3 : 1;
             totalScore += score * weight;
             totalWeight += weight;
+        });
+
+        // Usage Scenarios (Included ONLY if focused: Weight 3)
+        ['business', 'date', 'solo', 'family', 'group'].forEach(scene => {
+            if (focusedScenes.includes(scene)) {
+                // usageScores might be missing or partial
+                const score = usage[scene as keyof typeof usage] || 0;
+                const weight = 3;
+                totalScore += score * weight;
+                totalWeight += weight;
+            }
         });
 
         return totalScore / totalWeight;
@@ -101,23 +117,53 @@ export default function AnalysisResult({ place, focusedAxes = [], onToggleAxis }
 
             {/* Header Section: Name & Badges */}
             <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-8 md:p-10">
-                <div className="flex flex-col gap-6">
-                    <div className="flex items-center gap-2 text-slate-500 text-sm font-medium">
-                        <MapPin className="w-4 h-4" />
-                        <span>Google Maps 掲載店</span>
+                <div className="flex flex-col gap-4">
+                    <div className="flex flex-wrap items-center gap-3 text-sm font-medium">
+                        <div className="flex items-center gap-1.5 text-slate-500 bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
+                            <MapPin className="w-4 h-4" />
+                            <span>Google Maps 掲載店</span>
+                        </div>
+                        {place.hotpepper && (
+                            <div className="flex items-center gap-1.5 text-rose-600 bg-rose-50 px-3 py-1 rounded-full border border-rose-100">
+                                <span className="text-lg">🌶️</span>
+                                <span>HotPepper 掲載店</span>
+                            </div>
+                        )}
                     </div>
-                    <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">{place.name}</h2>
 
-                    {/* Badges */}
+                    {/* Name & Image Row */}
+                    <div className="flex flex-col md:flex-row md:items-center gap-6">
+                        {place.hotpepper?.imageUrl && (
+                            <div className="w-24 h-24 md:w-32 md:h-32 rounded-xl overflow-hidden shadow-sm border border-slate-100 shrink-0">
+                                <img
+                                    src={place.hotpepper.imageUrl}
+                                    alt={place.name}
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                        )}
+                        <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+                            {place.name}
+                        </h2>
+                    </div>
+
                     {/* Badges */}
                     <PlaceBadges place={place} />
 
-                    {/* Contact Info */}
+                    {/* Contact Info (Address, Access, Map Link) */}
                     <div className="flex flex-col gap-2 text-sm text-slate-600 mt-2">
                         {place.address && (
                             <div className="flex items-center gap-2">
                                 <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
                                 <span>{place.address}</span>
+                            </div>
+                        )}
+
+                        {/* HotPepper Access Info */}
+                        {place.hotpepper?.access && (
+                            <div className="flex items-center gap-2">
+                                <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
+                                <span>{place.hotpepper.access}</span>
                             </div>
                         )}
 
@@ -194,37 +240,75 @@ export default function AnalysisResult({ place, focusedAxes = [], onToggleAxis }
             {/* Evaluation Tab Content */}
             {activeTab === 'evaluation' && (
                 <>
-                    {/* Axis Selection Control */}
-                    <div className="mb-8 p-6 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center gap-4">
-                        <p className="text-sm font-bold text-slate-500">
-                            重視するポイントを選択してスコアをパーソナライズ（最大2つ）
-                        </p>
-                        <div className="flex flex-wrap gap-3 justify-center">
-                            {[
-                                { id: 'taste', label: '味・料理', icon: Utensils },
-                                { id: 'service', label: '接客・サービス', icon: Heart },
-                                { id: 'atmosphere', label: '雰囲気・空間', icon: Sparkles },
-                                { id: 'cost', label: 'コスパ', icon: TrendingUp },
-                            ].map((axis) => {
-                                const isSelected = focusedAxes.includes(axis.id);
-                                return (
-                                    <button
-                                        key={axis.id}
-                                        onClick={() => onToggleAxis && onToggleAxis(axis.id)}
-                                        disabled={!onToggleAxis}
-                                        className={`
+                    {/* Axis & Scenario Selection Control */}
+                    <div className="mb-8 p-6 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center gap-6">
+                        <div className="text-center">
+                            <p className="text-sm font-bold text-slate-500 mb-2">
+                                重視するポイント（複数選択可）
+                            </p>
+                            <div className="flex flex-wrap gap-3 justify-center">
+                                {[
+                                    { id: 'taste', label: '味・料理', icon: Utensils },
+                                    { id: 'service', label: '接客・サービス', icon: Heart },
+                                    { id: 'atmosphere', label: '雰囲気・空間', icon: Sparkles },
+                                    { id: 'cost', label: 'コスパ', icon: TrendingUp },
+                                ].map((axis) => {
+                                    const isSelected = focusedAxes.includes(axis.id);
+                                    return (
+                                        <button
+                                            key={axis.id}
+                                            onClick={() => onToggleAxis && onToggleAxis(axis.id)}
+                                            disabled={!onToggleAxis}
+                                            className={`
                                        flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all duration-300 border shadow-sm
                                        ${isSelected
-                                                ? 'bg-[#E65100] text-white border-[#E65100] transform scale-105 shadow-md'
-                                                : 'bg-white text-slate-600 border-slate-200 hover:border-[#E65100] hover:text-[#E65100]'
-                                            }
+                                                    ? 'bg-[#E65100] text-white border-[#E65100] transform scale-105 shadow-md'
+                                                    : 'bg-white text-slate-600 border-slate-200 hover:border-[#E65100] hover:text-[#E65100]'
+                                                }
                                      `}
-                                    >
-                                        <axis.icon className="w-4 h-4" />
-                                        {axis.label}
-                                    </button>
-                                );
-                            })}
+                                        >
+                                            <axis.icon className="w-4 h-4" />
+                                            {axis.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="w-full border-t border-slate-200"></div>
+
+                        <div className="text-center">
+                            <p className="text-sm font-bold text-slate-500 mb-2">
+                                利用シーン（複数選択可）
+                            </p>
+                            <div className="flex flex-wrap gap-3 justify-center">
+                                {[
+                                    { id: 'business', label: 'ビジネス', icon: Briefcase },
+                                    { id: 'date', label: 'デート', icon: Heart },
+                                    { id: 'solo', label: 'お一人様', icon: User },
+                                    { id: 'family', label: 'ファミリー', icon: Users },
+                                    { id: 'group', label: '団体', icon: Users },
+                                ].map((scene) => {
+                                    const isSelected = focusedScenes.includes(scene.id);
+                                    return (
+                                        <button
+                                            key={scene.id}
+                                            onClick={() => onToggleScene && onToggleScene(scene.id)}
+                                            disabled={!onToggleScene}
+                                            className={`
+                                       flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all duration-300 border shadow-sm
+                                       ${isSelected
+                                                    ? 'bg-rose-600 text-white border-rose-600 transform scale-105 shadow-md'
+                                                    : 'bg-white text-slate-600 border-slate-200 hover:border-rose-600 hover:text-rose-600'
+                                                }
+                                     `}
+                                        >
+                                            <scene.icon className="w-4 h-4" />
+                                            {scene.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
 
@@ -399,6 +483,13 @@ export default function AnalysisResult({ place, focusedAxes = [], onToggleAxis }
 
                     {/* Basic Info Section */}
                     <BasicInfoSection place={place} />
+
+                    {/* HotPepper Credit */}
+                    {place.hotpepper && (
+                        <div className="pb-8">
+                            <HotPepperCredit />
+                        </div>
+                    )}
                 </>
             )}
         </div>

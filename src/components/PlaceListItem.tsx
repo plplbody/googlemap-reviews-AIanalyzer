@@ -8,17 +8,19 @@ interface PlaceListItemProps {
     place: Place;
     onSelect: (placeId: string) => void;
     focusedAxes?: string[];
+    focusedScenes?: string[];
 }
 
-export default function PlaceListItem({ place, onSelect, focusedAxes = [] }: PlaceListItemProps) {
+export default function PlaceListItem({ place, onSelect, focusedAxes = [], focusedScenes = [] }: PlaceListItemProps) {
     const isAnalyzed = place.status === 'completed' && place.trueScore !== undefined;
     const isAnalyzing = place.status === 'pending' || place.status === 'processing';
 
     // Personalized Score Calculation
     const calculatePersonalizedScore = () => {
-        if (!place.axisScores || focusedAxes.length === 0) return null;
+        if (!place.axisScores || (focusedAxes.length === 0 && focusedScenes.length === 0)) return null;
 
         const scores = place.axisScores;
+        const usage = place.usageScores || {};
         let totalScore = 0;
         let totalWeight = 0;
 
@@ -29,12 +31,24 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [] }: Pla
             'cost': scores.cost
         };
 
-        // Standard Axes (Taste, Service, Atmosphere, Cost)
+        // Standard Axes (Always included: Weight 1 or 3)
         ['taste', 'service', 'atmosphere', 'cost'].forEach(axis => {
             const score = axesMap[axis] || 0;
             const weight = focusedAxes.includes(axis) ? 3 : 1;
             totalScore += score * weight;
             totalWeight += weight;
+        });
+
+        // Usage Scenarios (Included ONLY if focused: Weight 3)
+        // If not focused, we don't include them to avoid diluting the score with irrelevant scenarios
+        ['business', 'date', 'solo', 'family', 'group'].forEach(scene => {
+            if (focusedScenes.includes(scene)) {
+                // usageScores might be missing or partial
+                const score = usage[scene as keyof typeof usage] || 0;
+                const weight = 3;
+                totalScore += score * weight;
+                totalWeight += weight;
+            }
         });
 
         return totalScore / totalWeight;
@@ -47,16 +61,39 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [] }: Pla
             onClick={() => onSelect(place.id)}
             className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-xl border border-slate-100 transition-all duration-300 cursor-pointer group flex flex-col h-full"
         >
-            <div className="flex justify-between items-start mb-4">
-                <h3 className="text-xl font-bold text-slate-900 group-hover:text-orange-600 transition-colors line-clamp-1 flex-grow pr-2">
-                    {place.name}
-                </h3>
-                <div className="flex flex-col items-end shrink-0 ml-2">
-                    <div className="text-xs text-slate-400 font-bold mb-0.5">Google Map Score</div>
-                    <div className="flex items-center bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
-                        <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 mr-1" />
-                        <span className="font-bold text-slate-700">{place.originalRating?.toFixed(1) || '0.0'}</span>
-                        <span className="text-xs text-slate-400 ml-1">({place.userRatingsTotal || 0})</span>
+            {/* Image & Header Section */}
+            <div className="flex gap-4 mb-4">
+                {place.hotpepper?.imageUrl && (
+                    <div className="relative shrink-0 w-24 h-24 rounded-xl overflow-hidden shadow-sm border border-slate-100">
+                        <img
+                            src={place.hotpepper.imageUrl}
+                            alt={place.name}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                            onError={(e) => (e.currentTarget.style.display = 'none')}
+                        />
+                    </div>
+                )}
+                <div className="flex-grow min-w-0">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <h3 className="text-xl font-bold text-slate-900 group-hover:text-orange-600 transition-colors line-clamp-2 md:line-clamp-1 mb-1">
+                                {place.name}
+                            </h3>
+                            {place.hotpepper?.station && (
+                                <div className="inline-flex items-center gap-1 text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md mb-2">
+                                    <span className="text-orange-500">🚉</span>
+                                    {place.hotpepper.station}
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex flex-col items-end shrink-0 ml-2">
+                            <div className="text-[10px] text-slate-400 font-bold mb-0.5 tracking-wide">GOOGLE</div>
+                            <div className="flex items-center bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                                <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400 mr-1" />
+                                <span className="font-bold text-slate-700 text-sm">{place.originalRating?.toFixed(1) || '0.0'}</span>
+                                <span className="text-[10px] text-slate-400 ml-1">({place.userRatingsTotal || 0})</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -166,6 +203,11 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [] }: Pla
                     <ChevronRight className="w-3 h-3" />
                 </div>
             </div>
+            {place.hotpepper && (
+                <div className="text-[10px] text-slate-300 text-right pr-1 pt-1">
+                    Powered by HotPepper
+                </div>
+            )}
         </div>
     );
 }

@@ -4,6 +4,7 @@ import { GoogleAuth } from 'google-auth-library';
 import { getFirestore } from '@/lib/firebase/admin';
 import { enqueueAnalysis } from '@/lib/queue/client';
 import { Place } from '@/types/schema';
+import { searchHotPepperPlace } from '@/lib/hotpepper/client'; // Import at top
 
 export async function searchAndAnalyze(query: string): Promise<string> {
     console.log(`Analyzing place: ${query}`);
@@ -48,7 +49,7 @@ export async function searchAndAnalyze(query: string): Promise<string> {
         const headers = {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token.token}`,
-            'X-Goog-FieldMask': 'id,displayName,formattedAddress,rating,userRatingCount,reviews,priceLevel,priceRange,paymentOptions,delivery,takeout,dineIn,reservable,servesBeer,servesWine,servesVegetarianFood,servesCoffee,servesBreakfast,servesLunch,servesDinner,goodForChildren,goodForGroups,restroom,accessibilityOptions'
+            'X-Goog-FieldMask': 'id,displayName,formattedAddress,rating,userRatingCount,reviews,priceLevel,priceRange,paymentOptions,delivery,takeout,dineIn,reservable,servesBeer,servesWine,servesVegetarianFood,servesCoffee,servesBreakfast,servesLunch,servesDinner,goodForChildren,goodForGroups,restroom,accessibilityOptions,nationalPhoneNumber'
         };
 
         const response = await fetch(baseUrl, { method: 'GET', headers });
@@ -107,6 +108,23 @@ export async function searchAndAnalyze(query: string): Promise<string> {
         };
 
         await docRef.set(newPlace);
+
+        // Integrate HotPepper (High Accuracy with Phone)
+        const phoneNumber = (data.nationalPhoneNumber || '').replace(/[^0-9]/g, '');
+
+        if (phoneNumber) {
+            try {
+                const hpData = await searchHotPepperPlace(newPlace.name, phoneNumber);
+
+                if (hpData) {
+                    console.log(`HotPepper Hit (Phone)! ${hpData.name}`);
+                    await docRef.update({ hotpepper: hpData });
+                }
+            } catch (e) {
+                console.error('HotPepper integration error:', e);
+            }
+        }
+
         await enqueueAnalysis(placeId);
 
     } catch (error) {
@@ -123,6 +141,7 @@ export interface PlaceSearchResult {
     rating: number;
     userRatingsTotal: number;
     vicinity?: string;
+    hotpepper?: any; // We don't need full type here necessarily, or import it
 }
 
 async function searchPlacesIdOnly(query: string): Promise<string[]> {
@@ -170,76 +189,10 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
 
     try {
         // 1. ID Search (Free) - Skip if paging
-        // Pagination usually implies we skip the efficient ID-only check because we can't easily map pages to IDs without fetching.
-        // Also, cache logic is complex with pagination.
-        // For simplicity: If pageToken is present, go straight to API.
-        // If no pageToken, we can TRY cache, but we need to know if we have *all* results?
-        // Actually, the previous cache logic was "If we have ALL 20 IDs in cache".
-        // Now valid for first page.
-
         let placeIds: string[] = [];
-
-        // Only do ID search for first page to check cache
         if (!pageToken) {
             placeIds = await searchPlacesIdOnly(query);
-            if (placeIds.length === 0 && !pageToken) return { places: [] };
-
-            // 2. Check Cache (Only for first page)
-            const db = getFirestore();
-            const placesRef = db.collection('places');
-            const cachedPlaces: PlaceSearchResult[] = [];
-            let allCached = true;
-
-            for (const id of placeIds) {
-                const doc = await placesRef.doc(id).get();
-                if (doc.exists) {
-                    const data = doc.data() as Place;
-                    // Check expiration (30 days)
-                    const now = new Date();
-                    const updatedAt = data.updatedAt ? (data.updatedAt as any).toDate() : new Date(0);
-                    const diffTime = Math.abs(now.getTime() - updatedAt.getTime());
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-                    if (diffDays <= 30 && data.status !== 'error') {
-                        cachedPlaces.push({
-                            id: data.id,
-                            name: data.name,
-                            rating: data.originalRating,
-                            userRatingsTotal: data.userRatingsTotal,
-                            vicinity: data.address
-                        });
-                    } else {
-                        allCached = false;
-                        break;
-                    }
-                } else {
-                    allCached = false;
-                    break;
-                }
-            }
-
-            // 3. Conditional Return (Only if all cached and no page token needed logic?)
-            // If we have cached data for the top 20, we return them.
-            // Converting cache hits to a "Next Page" capable response is tricky because we don't have the nextPageToken from the original API call stored.
-            // If we return cached data, the user CANNOT load more because we don't have the token.
-            // ERROR: Using cache breaks pagination?
-            // "Load More" relies on Google's `nextPageToken`. Reviewing flow:
-            // Query -> Google API -> Returns items + Token.
-            // If we satisfy from Cache, we DON'T have the Token.
-            // So if we use Cache, "Load More" is impossible unless we re-fetch from API using the original query?
-            // Compromise: If we return cached results, we set `nextPageToken` to null.
-            // If the user wants "More", they might be stuck?
-            // Actually, if the cache has 20 items, and we show 20 items...
-            // User says "Load More". We don't have token.
-            // We'd have to trigger a NEW search (API) skipping the first 20? No, Google API doesn't support "offset".
-            // So, if we want to support "Load More", we MUST fetch from API to get the token, OR we accept that "Cached results have no next page".
-            // Since the user EXPLICITLY requested "More", we should prioritize API token availability if possible, OR just disable cache for now to ensure feature works?
-            // Or, we return cached results, but if user clicks "More" (which won't exist?), they can't.
-            // Let's Disable Cache for now to ensure Pagination works correctly as per user request.
-            // Or only disable cache if we expect more than 20 results? We don't know.
-            // Disabling cache for Search List is safer for this feature.
-
-            // NOTE: Caching currently disabled for direct search to ensure PAGINATION works (needs fresh nextPageToken).
+            // Cache logic disabled for now to simplify flow
         }
 
         console.log('Fetching fresh data from API...');
@@ -266,7 +219,7 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token.token}`,
-                'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.reviews,places.priceLevel,places.priceRange,places.paymentOptions,places.delivery,places.takeout,places.dineIn,places.reservable,places.servesBeer,places.servesWine,places.servesVegetarianFood,places.servesCoffee,places.servesBreakfast,places.servesLunch,places.servesDinner,places.goodForChildren,places.goodForGroups,places.restroom,places.accessibilityOptions,nextPageToken'
+                'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.reviews,places.priceLevel,places.priceRange,places.paymentOptions,places.delivery,places.takeout,places.dineIn,places.reservable,places.servesBeer,places.servesWine,places.servesVegetarianFood,places.servesCoffee,places.servesBreakfast,places.servesLunch,places.servesDinner,places.goodForChildren,places.goodForGroups,places.restroom,places.accessibilityOptions,places.nationalPhoneNumber,nextPageToken'
             },
             body: JSON.stringify(requestBody)
         });
@@ -283,7 +236,7 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
             return { places: [] };
         }
 
-        const db = getFirestore(); // Ensure DB is initialized
+        const db = getFirestore();
         const placesRef = db.collection('places');
         const batch = db.batch();
         const results: PlaceSearchResult[] = [];
@@ -291,8 +244,6 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
         for (const placeData of data.places) {
             const reviews = placeData.reviews?.map((r: any) => r.text?.text).filter(Boolean) || [];
 
-            // Construct full Place object to cache
-            // Use Partial<Place> to avoid 'missing property' errors when we deliberately omit 'status' to preserve it
             const newPlace: Partial<Place> = {
                 id: placeData.id,
                 name: placeData.displayName?.text || 'Unknown',
@@ -330,7 +281,6 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
                 updatedAt: new Date(),
             };
 
-            // Prepare for return
             results.push({
                 id: placeData.id,
                 name: placeData.displayName?.text || 'Unknown',
@@ -340,11 +290,28 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
             });
 
             const ref = placesRef.doc(placeData.id);
-            // Use merge: true to update existing docs without wiping other fields
             batch.set(ref, newPlace, { merge: true });
         }
 
         await batch.commit();
+
+        // Fire-and-forget: Integrate HotPepper Data (Phone Priority, then Name Match)
+        (async () => {
+            // We need to access the map of ID -> Phone from the API response since it's not in the SearchResult
+            const phoneMap = new Map<string, string>();
+            if (data.places) {
+                for (const p of data.places) {
+                    if (p.nationalPhoneNumber) {
+                        phoneMap.set(p.id, p.nationalPhoneNumber);
+                    }
+                }
+            }
+
+            for (const place of results) {
+                const tel = phoneMap.get(place.id);
+                integrateHotPepperInfo(place.id, place.name, tel).catch(e => console.error(e));
+            }
+        })();
 
         // Fire-and-forget analysis for items needing it
         (async () => {
@@ -356,14 +323,8 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
 
                 for (const snap of snapshots) {
                     const d = snap.data() as Place;
-                    // Trigger if:
-                    // 1. Status is MISSING (new)
-                    // 2. OR Status is 'error'
-                    // 3. We do NOT re-trigger if 'pending', 'processing', 'completed'.
                     if (!d.status || d.status === 'error') {
                         console.log(`Triggering analysis for ${d.id}`);
-                        // Set status to pending to prevent double-queueing? 
-                        // Ideally yes, but fire-and-forget.
                         enqueueAnalysis(d.id).catch(e => console.error(`Failed to enqueue ${d.id}`, e));
                     }
                 }
@@ -380,5 +341,26 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
     } catch (error) {
         console.error('Failed to search places:', error);
         return { places: [] };
+    }
+}
+
+export async function integrateHotPepperInfo(placeId: string, name: string, tel?: string): Promise<void> {
+    const db = getFirestore();
+    const docRef = db.collection('places').doc(placeId);
+
+    try {
+        const cleanTel = tel ? tel.replace(/[^0-9]/g, '') : undefined;
+        // console.log(`Integrating HotPepper for ${name} (Tel: ${cleanTel})...`);
+        const hpData = await searchHotPepperPlace(name, cleanTel);
+
+        if (hpData) {
+            console.log(`HotPepper Hit! ${hpData.name} for ${name}`);
+            await docRef.update({
+                hotpepper: hpData,
+                updatedAt: new Date()
+            });
+        }
+    } catch (e) {
+        console.error(`Error in integrateHotPepperInfo for ${placeId}`, e);
     }
 }

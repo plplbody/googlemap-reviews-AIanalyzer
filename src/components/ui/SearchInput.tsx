@@ -56,7 +56,7 @@ export default function SearchInput({ onSearchStart, onSearchComplete }: SearchI
                         type="text"
                         value={area}
                         onChange={(e) => setArea(e.target.value)}
-                        placeholder="エリア（例：渋谷、銀座）"
+                        placeholder="エリア・駅名"
                         className="w-full bg-transparent border-none focus:ring-0 p-0 text-slate-900 font-bold placeholder:text-slate-300 text-base truncate"
                     />
                 </div>
