@@ -2,6 +2,7 @@
 
 import { Place } from '@/types/schema';
 import { Star, MapPin, ChevronRight, Loader2 } from 'lucide-react';
+import { PlaceBadges } from '@/components/PlaceBadges';
 
 interface PlaceListItemProps {
     place: Place;
@@ -58,6 +59,11 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [] }: Pla
                         <span className="text-xs text-slate-400 ml-1">({place.userRatingsTotal || 0})</span>
                     </div>
                 </div>
+            </div>
+
+            {/* Badges */}
+            <div className="mb-3">
+                <PlaceBadges place={place} />
             </div>
 
             {/* AI Analysis Score Badge */}
