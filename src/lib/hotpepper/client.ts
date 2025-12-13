@@ -87,27 +87,8 @@ export async function searchHotPepperPlace(
             }
         }
 
-        // Strategy 2: Search by Name (Fallback if TEL fails or not provided)
-        if (shops.length === 0 && name) {
-            console.log(`[HotPepper] Fallback to Name Search: ${name}`);
-            const params = new URLSearchParams({
-                key: apiKey,
-                keyword: name, // generic keyword search often works better than 'name' for variations
-                format: 'json',
-                count: '1' // Get top match
-            });
-            const url = `${HOTPEPPER_API_ENDPOINT}?${params.toString()}`;
-            const res = await fetch(url);
-
-            if (res.ok) {
-                const data = await res.json() as HotPepperResponse;
-                if (data.results.shop && data.results.shop.length > 0) {
-                    shops = data.results.shop;
-                }
-            } else {
-                console.log('[HotPepper] Name Search Response NOT OK:', res.status);
-            }
-        }
+        // Strategy 2: Search by Name (Removed per user request to avoid mismatch)
+        // Only TEL search is authoritative enough.
 
         // Return null if no shops found
         if (shops.length === 0) return null;

@@ -1,8 +1,10 @@
 'use client';
 
 import { Place } from '@/types/schema';
-import { Star, MapPin, ChevronRight, Loader2 } from 'lucide-react';
+import { Star, MapPin, ChevronRight, Loader2, Train } from 'lucide-react';
 import { PlaceBadges } from '@/components/PlaceBadges';
+import { updateStationInfo } from '@/server/actions/station';
+import { useEffect, useState } from 'react';
 
 interface PlaceListItemProps {
     place: Place;
@@ -55,6 +57,17 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
     };
 
     const yourScore = calculatePersonalizedScore();
+
+    // Async trigger for station info
+    useEffect(() => {
+        if (!place.id || !place.location || place.nearestStation !== undefined) return;
+
+        // Trigger server action (fire and forget, Firestore listener will update UI)
+        // Check local storage or session to avoid spamming if implemented, but here relying on place.nearestStation check
+        // Note: nearestStation undefined means not checked. If null/empty logic handled in server action (we might want a flag to prevent loops)
+        // For now, simple check.
+        updateStationInfo(place.id, place.location.lat, place.location.lng);
+    }, [place.id, place.location, place.nearestStation]);
 
     return (
         <div
@@ -195,8 +208,17 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
 
             <div className="mt-auto pt-4 flex items-center justify-between text-xs text-slate-400 border-t border-slate-50">
                 <div className="flex items-center gap-1">
-                    <MapPin className="w-3 h-3" />
-                    <span className="line-clamp-1 max-w-[150px]">{place.address}</span>
+                    {place.nearestStation ? (
+                        <>
+                            <Train className="w-3 h-3 text-[#E65100]" />
+                            <span className="line-clamp-1 max-w-[150px] font-medium text-slate-600">{place.nearestStation}</span>
+                        </>
+                    ) : (
+                        <>
+                            <MapPin className="w-3 h-3" />
+                            <span className="line-clamp-1 max-w-[150px]">{place.address}</span>
+                        </>
+                    )}
                 </div>
                 <div className="flex items-center gap-1 text-[#E65100] font-medium group-hover:translate-x-1 transition-transform">
                     View Details

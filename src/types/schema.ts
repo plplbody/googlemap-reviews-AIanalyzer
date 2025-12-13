@@ -57,6 +57,13 @@ export interface Place {
     endPrice?: { currencyCode: string; units: string; nanos?: number };
   };
   reviews?: string[]; // Array of review texts
+  
+  // Location Info
+  location?: {
+    lat: number;
+    lng: number;
+  };
+  nearestStation?: string; // e.g. "六本木駅 350m"
 
   // Detailed Info
   detailedInfo?: {

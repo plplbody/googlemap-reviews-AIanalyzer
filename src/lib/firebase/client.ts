@@ -20,7 +20,8 @@ if (process.env.NODE_ENV === 'development') {
     // Firestore SDK handles this gracefully usually, but let's be safe
     // Actually, connectFirestoreEmulator should be called before any operation
     try {
-        connectFirestoreEmulator(firestore, 'localhost', 8080);
+        const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+        connectFirestoreEmulator(firestore, host, 8080);
         console.log('Connected to Firestore Emulator');
     } catch (e) {
         // Ignore if already connected

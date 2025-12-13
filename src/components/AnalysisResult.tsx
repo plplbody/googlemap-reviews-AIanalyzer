@@ -5,7 +5,7 @@ import { searchAndAnalyze } from '@/server/actions/place';
 import { getGoogleMapsApiKey } from '@/server/actions/config';
 import { useState, useEffect } from 'react';
 import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
-import { Loader2, Star, TrendingUp, DollarSign, Coffee, Smile, MapPin, Briefcase, Heart, User, Users, Award, RefreshCw, Map, Utensils, Wine, Accessibility, CreditCard, Check, X, Sparkles } from 'lucide-react';
+import { Loader2, Star, TrendingUp, DollarSign, Coffee, Smile, MapPin, Briefcase, Heart, User, Users, Award, RefreshCw, Map, Utensils, Wine, Accessibility, CreditCard, Check, X, Sparkles, ExternalLink } from 'lucide-react';
 import { PlaceBadges } from '@/components/PlaceBadges';
 import { HotPepperCredit } from '@/components/HotPepperCredit';
 
@@ -44,7 +44,7 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
             <div className="flex flex-col items-center justify-center p-12 space-y-4 animate-pulse">
                 <Loader2 className="w-12 h-12 text-rose-500 animate-spin" />
                 <p className="text-xl text-slate-800 font-medium">AIが分析中...</p>
-                <p className="text-sm text-slate-500">数千件のレビューから真実を抽出しています</p>
+                <p className="text-sm text-slate-500">口コミを分析し、真実を抽出しています</p>
             </div>
         );
     }
@@ -118,18 +118,7 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
             {/* Header Section: Name & Badges */}
             <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-8 md:p-10">
                 <div className="flex flex-col gap-4">
-                    <div className="flex flex-wrap items-center gap-3 text-sm font-medium">
-                        <div className="flex items-center gap-1.5 text-slate-500 bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
-                            <MapPin className="w-4 h-4" />
-                            <span>Google Maps 掲載店</span>
-                        </div>
-                        {place.hotpepper && (
-                            <div className="flex items-center gap-1.5 text-rose-600 bg-rose-50 px-3 py-1 rounded-full border border-rose-100">
-                                <span className="text-lg">🌶️</span>
-                                <span>HotPepper 掲載店</span>
-                            </div>
-                        )}
-                    </div>
+                    {/* Name & Image Row */}
 
                     {/* Name & Image Row */}
                     <div className="flex flex-col md:flex-row md:items-center gap-6">
@@ -160,10 +149,11 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
                         )}
 
                         {/* HotPepper Access Info */}
-                        {place.hotpepper?.access && (
+                        {/* Nearest Station Info (Prioritized) */}
+                        {(place.nearestStation || place.hotpepper?.access) && (
                             <div className="flex items-center gap-2">
                                 <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
-                                <span>{place.hotpepper.access}</span>
+                                <span>{place.nearestStation || place.hotpepper?.access}</span>
                             </div>
                         )}
 
@@ -178,6 +168,33 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
                                 Google Mapで見る
                             </a>
                         </div>
+                    </div>
+
+                    {/* Actions: Reservations */}
+                    <div className="mt-6 flex flex-wrap gap-3">
+                        {/* HotPepper */}
+                        {place.hotpepper?.url && (
+                            <a
+                                href={place.hotpepper.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-6 py-3 bg-[#FF0033] hover:bg-[#D9002B] text-white font-bold rounded-full transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                            >
+                                <span>ホットペッパーで予約</span>
+                                <ExternalLink className="w-4 h-4" />
+                            </a>
+                        )}
+
+                        {/* Tabelog (Search) */}
+                        <a
+                            href={`https://tabelog.com/rstLst/?vs=1&sw=${encodeURIComponent(place.name)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-6 py-3 bg-[#FFC107] hover:bg-[#FFB300] text-white font-bold rounded-full transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                        >
+                            <span>食べログで予約</span>
+                            <ExternalLink className="w-4 h-4 text-white" />
+                        </a>
                     </div>
 
                     {/* Last Updated */}

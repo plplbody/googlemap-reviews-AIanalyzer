@@ -49,7 +49,7 @@ export async function searchAndAnalyze(query: string): Promise<string> {
         const headers = {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token.token}`,
-            'X-Goog-FieldMask': 'id,displayName,formattedAddress,rating,userRatingCount,reviews,priceLevel,priceRange,paymentOptions,delivery,takeout,dineIn,reservable,servesBeer,servesWine,servesVegetarianFood,servesCoffee,servesBreakfast,servesLunch,servesDinner,goodForChildren,goodForGroups,restroom,accessibilityOptions,nationalPhoneNumber'
+            'X-Goog-FieldMask': 'id,displayName,formattedAddress,location,rating,userRatingCount,reviews,priceLevel,priceRange,paymentOptions,delivery,takeout,dineIn,reservable,servesBeer,servesWine,servesVegetarianFood,servesCoffee,servesBreakfast,servesLunch,servesDinner,goodForChildren,goodForGroups,restroom,accessibilityOptions,nationalPhoneNumber'
         };
 
         const response = await fetch(baseUrl, { method: 'GET', headers });
@@ -77,6 +77,10 @@ export async function searchAndAnalyze(query: string): Promise<string> {
             ...(data.priceLevel ? { priceLevel: data.priceLevel } : {}),
             ...(data.priceRange ? { priceRange: data.priceRange } : {}),
             reviews: reviews,
+            location: data.location ? {
+                lat: data.location.latitude,
+                lng: data.location.longitude
+            } : undefined,
             detailedInfo: {
                 paymentOptions: data.paymentOptions,
                 serviceOptions: {
@@ -219,7 +223,7 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token.token}`,
-                'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.reviews,places.priceLevel,places.priceRange,places.paymentOptions,places.delivery,places.takeout,places.dineIn,places.reservable,places.servesBeer,places.servesWine,places.servesVegetarianFood,places.servesCoffee,places.servesBreakfast,places.servesLunch,places.servesDinner,places.goodForChildren,places.goodForGroups,places.restroom,places.accessibilityOptions,places.nationalPhoneNumber,nextPageToken'
+                'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.reviews,places.priceLevel,places.priceRange,places.paymentOptions,places.delivery,places.takeout,places.dineIn,places.reservable,places.servesBeer,places.servesWine,places.servesVegetarianFood,places.servesCoffee,places.servesBreakfast,places.servesLunch,places.servesDinner,places.goodForChildren,places.goodForGroups,places.restroom,places.accessibilityOptions,places.nationalPhoneNumber,nextPageToken'
             },
             body: JSON.stringify(requestBody)
         });
@@ -253,6 +257,10 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
                 ...(placeData.priceLevel ? { priceLevel: placeData.priceLevel } : {}),
                 ...(placeData.priceRange ? { priceRange: placeData.priceRange } : {}),
                 reviews: reviews,
+                location: placeData.location ? {
+                    lat: placeData.location.latitude,
+                    lng: placeData.location.longitude
+                } : undefined,
                 detailedInfo: {
                     paymentOptions: placeData.paymentOptions,
                     serviceOptions: {

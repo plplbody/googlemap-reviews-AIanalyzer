@@ -36,7 +36,7 @@ export default function SearchInput({ onSearchStart, onSearchComplete }: SearchI
             <form onSubmit={handleSearch} className="relative flex items-center bg-white/80 backdrop-blur-md border border-white/20 rounded-full shadow-2xl hover:shadow-orange-500/20 transition-all duration-300 overflow-hidden p-2 h-20 w-full group">
 
                 {/* キーワード入力欄 */}
-                <div className="flex-1 flex flex-col justify-center px-6 border-r border-slate-200/50 hover:bg-white/50 transition-colors h-full">
+                <div className="flex-[1.2] flex flex-col justify-center px-4 border-r border-slate-200/50 hover:bg-white/50 transition-colors h-full">
                     <label htmlFor="keyword" className="text-xs font-bold text-slate-500 mb-0.5 uppercase tracking-wider">Keyword</label>
                     <input
                         id="keyword"
@@ -44,12 +44,13 @@ export default function SearchInput({ onSearchStart, onSearchComplete }: SearchI
                         value={keyword}
                         onChange={(e) => setKeyword(e.target.value)}
                         placeholder="店名・ジャンル・キーワード"
-                        className="w-full bg-transparent border-none focus:ring-0 p-0 text-slate-900 font-bold placeholder:text-slate-300 text-base truncate"
+                        className="w-full bg-transparent border-none focus:ring-0 focus:outline-none p-0 text-slate-900 font-bold placeholder:text-slate-400 text-base truncate caret-slate-400"
+                        style={{ transition: 'background-color 5000s ease-in-out 0s' }}
                     />
                 </div>
 
                 {/* エリア入力欄 */}
-                <div className="flex-1 flex flex-col justify-center px-6 hover:bg-white/50 transition-colors h-full hidden md:flex">
+                <div className="flex-1 flex flex-col justify-center px-4 hover:bg-white/50 transition-colors h-full border-l border-slate-200/50">
                     <label htmlFor="area" className="text-xs font-bold text-slate-500 mb-0.5 uppercase tracking-wider">Area</label>
                     <input
                         id="area"
@@ -57,7 +58,8 @@ export default function SearchInput({ onSearchStart, onSearchComplete }: SearchI
                         value={area}
                         onChange={(e) => setArea(e.target.value)}
                         placeholder="エリア・駅名"
-                        className="w-full bg-transparent border-none focus:ring-0 p-0 text-slate-900 font-bold placeholder:text-slate-300 text-base truncate"
+                        className="w-full bg-transparent border-none focus:ring-0 focus:outline-none p-0 text-slate-900 font-bold placeholder:text-slate-400 text-base truncate caret-slate-400"
+                        style={{ transition: 'background-color 5000s ease-in-out 0s' }}
                     />
                 </div>
 

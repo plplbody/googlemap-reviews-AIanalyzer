@@ -9,8 +9,8 @@ const shipporiMincho = Shippori_Mincho({
 });
 
 export const metadata: Metadata = {
-    title: "True Review - Google Map Analysis",
-    description: "AI-powered Google Map review analysis",
+    title: "AI Concierge for グルメ",
+    description: "あなたに最適なお店をAIが探します。",
 };
 
 // アプリケーション全体のルートレイアウト

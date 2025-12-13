@@ -15,7 +15,7 @@ import {
   PlaceSearchResult,
 } from "@/server/actions/place";
 import { useRealtimePlaces } from "@/hooks/useRealtimePlaces";
-import { Utensils, Award, Sparkles, TrendingUp, ArrowLeft, Heart, ListFilter, Star } from "lucide-react";
+import { Utensils, Award, Sparkles, TrendingUp, ArrowLeft, Heart, ListFilter, Star, Menu, X } from "lucide-react";
 
 
 
@@ -37,6 +37,8 @@ function HomeContent() {
   const [loadingMore, setLoadingMore] = useState(false);
   // Sort State
   const [sortBy, setSortBy] = useState<'match' | 'ai' | 'google'>('ai');
+  // Mobile Menu State
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Initialize state from URL on first load
   const [focusedAxes, setFocusedAxes] = useState<string[]>(() => {
@@ -310,7 +312,7 @@ function HomeContent() {
           className="text-2xl font-bold tracking-widest cursor-pointer"
           onClick={resetHome}
         >
-          GASTRONOMY AI
+          AI Concierge <span className="text-xs font-normal opacity-80 ml-1">for グルメ</span>
         </div>
         <div className="hidden md:flex gap-8 text-sm font-medium tracking-wide">
           <span className="cursor-pointer hover:text-[#E65100] transition-colors">
@@ -323,6 +325,33 @@ function HomeContent() {
             LOGIN
           </span>
         </div>
+
+        {/* Mobile Menu Toggle */}
+        <button
+          className="md:hidden p-2"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        >
+          {isMobileMenuOpen ? (
+            <X className="w-6 h-6" />
+          ) : (
+            <Menu className="w-6 h-6" />
+          )}
+        </button>
+
+        {/* Mobile Menu Overlay */}
+        {isMobileMenuOpen && (
+          <div className="absolute top-full left-0 w-full bg-white/95 backdrop-blur-md shadow-lg p-6 flex flex-col gap-6 md:hidden animate-in slide-in-from-top-2 duration-200">
+            <span className="text-slate-900 font-bold tracking-wider cursor-pointer hover:text-[#E65100]" onClick={() => setIsMobileMenuOpen(false)}>
+              COLLECTIONS
+            </span>
+            <span className="text-slate-900 font-bold tracking-wider cursor-pointer hover:text-[#E65100]" onClick={() => setIsMobileMenuOpen(false)}>
+              ABOUT
+            </span>
+            <span className="text-slate-900 font-bold tracking-wider cursor-pointer hover:text-[#E65100]" onClick={() => setIsMobileMenuOpen(false)}>
+              LOGIN
+            </span>
+          </div>
+        )}
       </nav>
 
       {/* ヒーローセクション（ホーム画面でのみ表示） */}
@@ -341,13 +370,13 @@ function HomeContent() {
             {/* メインコンテンツ */}
             <div className="relative z-10 w-full max-w-4xl px-6 text-center flex flex-col items-center gap-8">
               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-                <h1 className="text-5xl md:text-7xl font-bold text-white tracking-tight text-shadow-lg leading-tight">
-                  真実の<span className="text-[#E65100]">美味</span>を、
-                  <br />
-                  見極める。
+                <h1 className="text-3xl md:text-6xl font-bold text-white tracking-tight text-shadow-lg leading-tight">
+                  あなた専属の、<br />
+                  <span className="text-[#E65100]">AIグルメコンシェルジュ</span>
                 </h1>
-                <p className="text-gray-200 text-lg md:text-xl font-sans font-light tracking-wide max-w-2xl mx-auto">
-                  AIが数千の口コミを分析し、隠された名店と真の評価を明らかにします。
+                <p className="text-gray-200 text-lg md:text-xl font-sans font-light tracking-wide max-w-2xl mx-auto leading-relaxed">
+                  口コミをAIが分析し、客観的に評価。<br className="hidden md:block" />
+                  あなたの好みや価値観に合わせて、<span className="text-white font-medium">最適なお店</span>をご提案します。
                 </p>
               </div>
 
@@ -368,33 +397,33 @@ function HomeContent() {
                   <div className="w-16 h-16 rounded-full bg-[#FAFAFA] flex items-center justify-center group-hover:bg-[#E65100]/10 transition-colors">
                     <Sparkles className="w-8 h-8 text-[#E65100]" />
                   </div>
-                  <h3 className="text-xl font-bold">AI分析</h3>
+                  <h3 className="text-xl font-bold">客観的なAI評価</h3>
                   <p className="text-gray-500 font-sans text-sm leading-relaxed">
-                    膨大な口コミから感情を読み解き、
-                    <br />
-                    数値だけでは見えない魅力を抽出。
+                    口コミを公平に分析。<br />
+                    サクラやノイズを排除し、<br />
+                    お店の本来の実力を数値化します。
+                  </p>
+                </div>
+                <div className="flex flex-col items-center gap-4 group">
+                  <div className="w-16 h-16 rounded-full bg-[#FAFAFA] flex items-center justify-center group-hover:bg-[#E65100]/10 transition-colors">
+                    <Heart className="w-8 h-8 text-rose-500" />
+                  </div>
+                  <h3 className="text-xl font-bold">あなただけのマッチ度</h3>
+                  <p className="text-gray-500 font-sans text-sm leading-relaxed">
+                    味、雰囲気、サービスの好みや<br />
+                    利用シーンに合わせて、<br />
+                    あなたとの相性を瞬時に計算。
                   </p>
                 </div>
                 <div className="flex flex-col items-center gap-4 group">
                   <div className="w-16 h-16 rounded-full bg-[#FAFAFA] flex items-center justify-center group-hover:bg-[#E65100]/10 transition-colors">
                     <Award className="w-8 h-8 text-[#C5A059]" />
                   </div>
-                  <h3 className="text-xl font-bold">真のスコア</h3>
+                  <h3 className="text-xl font-bold">失敗しないお店選び</h3>
                   <p className="text-gray-500 font-sans text-sm leading-relaxed">
-                    サクラや偏見を排除した、
-                    <br />
-                    純粋な味とサービスの評価を算出。
-                  </p>
-                </div>
-                <div className="flex flex-col items-center gap-4 group">
-                  <div className="w-16 h-16 rounded-full bg-[#FAFAFA] flex items-center justify-center group-hover:bg-[#E65100]/10 transition-colors">
-                    <TrendingUp className="w-8 h-8 text-[#1A1A1A]" />
-                  </div>
-                  <h3 className="text-xl font-bold">トレンド予測</h3>
-                  <p className="text-gray-500 font-sans text-sm leading-relaxed">
-                    次に流行る店、予約困難になる店を
-                    <br />
-                    いち早くキャッチ。
+                    ビジネスからデートまで。<br />
+                    熟練のコンシェルジュのように、<br />
+                    その日の目的に最適解を導きます。
                   </p>
                 </div>
               </div>
@@ -411,11 +440,11 @@ function HomeContent() {
           <div className="container mx-auto px-6 mb-8">
             <div className="flex flex-col gap-6">
               <button
-                onClick={handleBack}
+                onClick={resetHome}
                 className="flex items-center gap-2 text-slate-500 hover:text-[#E65100] transition-colors w-fit font-medium"
               >
                 <ArrowLeft className="w-5 h-5" />
-                Back to Home
+                ホーム
               </button>
               <div className="w-full max-w-4xl mx-auto mb-4">
                 <SearchInput
@@ -424,64 +453,72 @@ function HomeContent() {
                 />
               </div>
 
-              {/* Axis Selection UI */}
-              <div className="flex flex-col items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
-                <p className="text-sm text-slate-500 font-medium">重視するポイントや利用シーンを選択してください。あなたへのマッチ度を計算します。</p>
+              {/* Filter Selection UI */}
+              <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-top-4 duration-500 w-full max-w-4xl mx-auto">
+                <p className="text-sm text-slate-500 font-medium text-center">重視するポイントや利用シーンを選択してください。あなたへのマッチ度を計算します。</p>
 
-                {/* 1. Axes */}
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {[
-                    { id: 'taste', label: '味・料理', icon: Utensils },
-                    { id: 'service', label: '接客・サービス', icon: Heart },
-                    { id: 'atmosphere', label: '雰囲気・空間', icon: Sparkles },
-                    { id: 'cost', label: 'コスパ', icon: TrendingUp },
-                  ].map((axis) => {
-                    const isSelected = focusedAxes.includes(axis.id);
-                    return (
-                      <button
-                        key={axis.id}
-                        onClick={() => handleAxisToggle(axis.id)}
-                        className={`
-                          flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all duration-300 border
-                          ${isSelected
-                            ? 'bg-[#E65100] text-white border-[#E65100] shadow-md transform scale-105'
-                            : 'bg-white text-slate-600 border-slate-200 hover:border-[#E65100] hover:text-[#E65100]'
-                          }
-                        `}
-                      >
-                        <axis.icon className="w-4 h-4" />
-                        {axis.label}
-                      </button>
-                    );
-                  })}
-                </div>
+                <div className="flex flex-col gap-8">
+                  {/* 1. Axes */}
+                  <div className="flex flex-col gap-3">
+                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider text-center">重視するポイント <span className="text-xs font-normal opacity-70">(複数選択可)</span></h3>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {[
+                        { id: 'taste', label: '味・料理', icon: Utensils },
+                        { id: 'service', label: '接客・サービス', icon: Heart },
+                        { id: 'atmosphere', label: '雰囲気・空間', icon: Sparkles },
+                        { id: 'cost', label: 'コスパ', icon: TrendingUp },
+                      ].map((axis) => {
+                        const isSelected = focusedAxes.includes(axis.id);
+                        return (
+                          <button
+                            key={axis.id}
+                            onClick={() => handleAxisToggle(axis.id)}
+                            className={`
+                                flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all duration-300 border
+                                ${isSelected
+                                ? 'bg-[#E65100] text-white border-[#E65100] shadow-md transform scale-105'
+                                : 'bg-white text-slate-600 border-slate-200 hover:border-[#E65100] hover:text-[#E65100]'
+                              }
+                                `}
+                          >
+                            <axis.icon className="w-4 h-4" />
+                            {axis.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
 
-                {/* 2. Scenarios */}
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {[
-                    { id: 'business', label: 'ビジネス' },
-                    { id: 'date', label: 'デート' },
-                    { id: 'solo', label: 'お一人様' },
-                    { id: 'family', label: 'ファミリー' },
-                    { id: 'group', label: '団体' },
-                  ].map((scene) => {
-                    const isSelected = focusedScenes.includes(scene.id);
-                    return (
-                      <button
-                        key={scene.id}
-                        onClick={() => handleSceneToggle(scene.id)}
-                        className={`
-                              flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-bold transition-all duration-300 border
-                              ${isSelected
-                            ? 'bg-rose-600 text-white border-rose-600 shadow-md transform scale-105'
-                            : 'bg-white text-slate-500 border-slate-200 hover:border-rose-600 hover:text-rose-600'
-                          }
-                            `}
-                      >
-                        {scene.label}
-                      </button>
-                    );
-                  })}
+                  {/* 2. Scenarios */}
+                  <div className="flex flex-col gap-3">
+                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider text-center">利用シーン <span className="text-xs font-normal opacity-70">(複数選択可)</span></h3>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {[
+                        { id: 'business', label: 'ビジネス' },
+                        { id: 'date', label: 'デート' },
+                        { id: 'solo', label: 'お一人様' },
+                        { id: 'family', label: 'ファミリー' },
+                        { id: 'group', label: '団体' },
+                      ].map((scene) => {
+                        const isSelected = focusedScenes.includes(scene.id);
+                        return (
+                          <button
+                            key={scene.id}
+                            onClick={() => handleSceneToggle(scene.id)}
+                            className={`
+                                    flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-bold transition-all duration-300 border
+                                    ${isSelected
+                                ? 'bg-rose-600 text-white border-rose-600 shadow-md transform scale-105'
+                                : 'bg-white text-slate-500 border-slate-200 hover:border-rose-600 hover:text-rose-600'
+                              }
+                                    `}
+                          >
+                            {scene.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -501,7 +538,7 @@ function HomeContent() {
                           `}
                   >
                     <Sparkles className="w-3.5 h-3.5" />
-                    あなたへのマッチ度
+                    マッチ度
                   </button>
                   <button
                     onClick={() => setSortBy('ai')}
@@ -548,13 +585,62 @@ function HomeContent() {
       {/* 詳細表示（分析結果） */}
       {viewState === "DETAIL" && place && (
         <div className="pt-32 pb-24 container mx-auto px-6 animate-in fade-in duration-500">
-          <button
-            onClick={handleBack}
-            className="flex items-center gap-2 text-slate-500 hover:text-[#E65100] transition-colors mb-6 font-medium"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Back to List
-          </button>
+          <div className="flex justify-between items-center mb-6">
+            <button
+              onClick={() => {
+                const params = new URLSearchParams();
+                params.set("view", "LIST");
+                if (query) params.set("q", query);
+                if (focusedAxes.length > 0) params.set("focus", focusedAxes.join(","));
+                if (focusedScenes.length > 0) params.set("scenes", focusedScenes.join(","));
+                router.push(`/?${params.toString()}`);
+              }}
+              className="flex items-center gap-2 text-slate-500 hover:text-[#E65100] transition-colors font-medium"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              一覧
+            </button>
+
+            <div className="flex gap-4">
+              {(() => {
+                const currentIndex = sortedPlaces.findIndex(p => p.id === place.id);
+                const prevPlace = currentIndex !== -1 && currentIndex > 0
+                  ? sortedPlaces[currentIndex - 1]
+                  : null;
+
+                if (!prevPlace) return null;
+
+                return (
+                  <button
+                    onClick={() => handlePlaceSelect(prevPlace.id)}
+                    className="flex items-center gap-2 text-slate-500 hover:text-[#E65100] transition-colors font-medium"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                    前の店
+                  </button>
+                );
+              })()}
+
+              {(() => {
+                const currentIndex = sortedPlaces.findIndex(p => p.id === place.id);
+                const nextPlace = currentIndex !== -1 && currentIndex < sortedPlaces.length - 1
+                  ? sortedPlaces[currentIndex + 1]
+                  : null;
+
+                if (!nextPlace) return null;
+
+                return (
+                  <button
+                    onClick={() => handlePlaceSelect(nextPlace.id)}
+                    className="flex items-center gap-2 text-slate-500 hover:text-[#E65100] transition-colors font-medium"
+                  >
+                    次の店
+                    <ArrowLeft className="w-5 h-5 rotate-180" />
+                  </button>
+                );
+              })()}
+            </div>
+          </div>
           <AnalysisResult
             place={place}
             focusedAxes={focusedAxes}
