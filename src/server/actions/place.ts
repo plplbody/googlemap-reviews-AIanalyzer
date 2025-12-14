@@ -4,7 +4,7 @@ import { GoogleAuth } from 'google-auth-library';
 import { getFirestore } from '@/lib/firebase/admin';
 import { enqueueAnalysis } from '@/lib/queue/client';
 import { Place } from '@/types/schema';
-import { searchHotPepperPlace } from '@/lib/hotpepper/client'; // Import at top
+import { searchHotPepperPlace } from '@/lib/hotpepper/client';
 
 export async function searchAndAnalyze(query: string): Promise<string> {
     console.log(`Analyzing place: ${query}`);
@@ -145,7 +145,7 @@ export interface PlaceSearchResult {
     rating: number;
     userRatingsTotal: number;
     vicinity?: string;
-    hotpepper?: any; // We don't need full type here necessarily, or import it
+    hotpepper?: any;
 }
 
 async function searchPlacesIdOnly(query: string): Promise<string[]> {
@@ -197,6 +197,8 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
         if (!pageToken) {
             placeIds = await searchPlacesIdOnly(query);
             // Cache logic disabled for now to simplify flow
+            // Note: In a real "ID First" flow, we would check FireStore here.
+            // But now we proceed to Full Search for simplicity as per previous context.
         }
 
         console.log('Fetching fresh data from API...');
@@ -255,7 +257,7 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
                 originalRating: placeData.rating || 0,
                 userRatingsTotal: placeData.userRatingCount || 0,
                 ...(placeData.priceLevel ? { priceLevel: placeData.priceLevel } : {}),
-                ...(placeData.priceRange ? { priceRange: placeData.priceRange } : {}),
+                ...(placeData.priceRange ? { priceRange: data.priceRange } : {}),
                 reviews: reviews,
                 location: placeData.location ? {
                     lat: placeData.location.latitude,
@@ -305,7 +307,6 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
 
         // Fire-and-forget: Integrate HotPepper Data (Phone Priority, then Name Match)
         (async () => {
-            // We need to access the map of ID -> Phone from the API response since it's not in the SearchResult
             const phoneMap = new Map<string, string>();
             if (data.places) {
                 for (const p of data.places) {

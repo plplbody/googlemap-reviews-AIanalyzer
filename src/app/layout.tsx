@@ -13,6 +13,8 @@ export const metadata: Metadata = {
     description: "あなたに最適なお店をAIが探します。",
 };
 
+import { AuthProvider } from "@/contexts/AuthContext";
+
 // アプリケーション全体のルートレイアウト
 export default function RootLayout({
     children,
@@ -21,7 +23,9 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="ja" suppressHydrationWarning>
-            <body className={`${shipporiMincho.className} antialiased`}>{children}</body>
+            <body className={`${shipporiMincho.className} antialiased`}>
+                <AuthProvider>{children}</AuthProvider>
+            </body>
         </html>
     );
 }
