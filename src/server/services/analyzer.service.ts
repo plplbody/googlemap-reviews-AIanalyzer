@@ -4,8 +4,14 @@ import { Place, AnalysisStatus } from '@/types/schema';
 
 // Initialize Vertex AI lazily
 const getModel = () => {
+    const project = process.env.GOOGLE_CLOUD_PROJECT;
+    if (!project) {
+        throw new Error("GOOGLE_CLOUD_PROJECT environment variable is not set.");
+    }
+
+    // Gemini 2.0 Flash is currently available in us-central1
     const vertexAI = new VertexAI({
-        project: process.env.GOOGLE_CLOUD_PROJECT || 'demo-project',
+        project: project,
         location: 'us-central1'
     });
     return vertexAI.getGenerativeModel({ model: 'gemini-2.0-flash-001' });

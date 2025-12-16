@@ -10,7 +10,7 @@
             {
                 "source": "**",
                 "run": {
-                    "serviceId": "gourmet-app",
+                    "serviceId": "ai-concierge-for-gourmet",
                     "region": "asia-northeast1"
                 }
             }

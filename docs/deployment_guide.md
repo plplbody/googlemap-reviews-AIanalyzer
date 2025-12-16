@@ -28,6 +28,21 @@ Firebase Authentication（Googleログイン）を使用するには、GCP側で
 5.  **Scopes**: デフォルトのままで保存して次へ。
 6.  **Test Users**: テストであれば自分のメールアドレスを追加。本番公開時は「Publish」ボタンを押して本番化します。
 
+### 1.3. Cloud Run サービスアカウントの権限設定
+Cloud Run (および Cloud Tasks) が使用するサービスアカウントには、以下のIAMロールが必要です。
+デフォルトの `Comput Engine default service account` を使う場合、多くの権限が初期状態で付与されていますが、セキュリティ強化のため専用のサービスアカウントを作成する場合は以下を付与してください。
+
+| ロール名 | ID (`roles/...`) | 用途 |
+| :--- | :--- | :--- |
+| **Vertex AI ユーザー** | `roles/aiplatform.user` | Gemini (AI分析) の実行に必要 |
+| **Cloud Datastore ユーザー** | `roles/datastore.user` | Firestore への読み書きに必要 |
+| **Cloud Tasks エンキューアー** | `roles/cloudtasks.enqueuer` | 分析キューへのタスク追加に必要 |
+| **サービスアカウントユーザー** | `roles/iam.serviceAccountUser` | Cloud Tasks が Cloud Run を起動する際の認証に必要 |
+| **Service Usage コンシューマー** | `roles/serviceusage.serviceUsageConsumer` | 各種APIのクォータ利用に必要 |
+
+> [!TIP]
+> **設定方法**: GCPコンソールの "IAM & Admin" > "IAM" から、Cloud Runに割り当てるサービスアカウント（デフォルトは `[project-number]-compute@developer.gserviceaccount.com`）を編集し、上記のロールを追加します。
+
 ## 2. Firebase プロジェクトの作成とリンク
 
 1.  [Firebase Console](https://console.firebase.google.com/) にアクセスし、「プロジェクトを追加」をクリック。
@@ -47,6 +62,16 @@ Firebase Authentication（Googleログイン）を使用するには、GCP側で
 4.  **保存** をクリック。
     *   *これだけで、裏側でGCPの「Credentials」にOAuth 2.0 クライアントIDが自動作成されます。*
 
+### 2.3. Firestore データベースの作成
+Authenticationの次は、データベースを有効化します。
+
+1.  メニュー **Build > Firestore Database** を選択し「データベースの作成」をクリック。
+2.  **Database ID**: `(default)` のまま次へ。
+3.  **Location**: Cloud Runと同じリージョン (`asia-northeast1` / Tokyo) を選択。
+    *   *注意: 後から変更できません。*
+4.  **Security Rules**: 「本番環境モード (Production mode)」を選択して作成。
+    *   *最初はすべて拒否されますが、後ほどの手順でローカルの `firestore.rules` をデプロイして上書きするため問題ありません。*
+
 ## 3. 本番環境変数の準備
 
 Cloud Runに設定する環境変数を準備します。
@@ -55,6 +80,7 @@ Cloud Runに設定する環境変数を準備します。
 | 変数名 | 取得元 / 設定値 |
 | :--- | :--- |
 | `HOTPEPPER_API_KEY` | リクルートWebサービスで発行したキー |
+| `GOOGLE_MAPS_API_KEY` | GCPコンソール > Credentials で発行したAPIキー (詳細画面の地図表示用: Embed API) |
 | `GEMINI_API_KEY` | (Vertex AIを使うため今回は**不要**ですがコード互換のためダミー値でも可、またはGemini APIキー) |
 | `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebaseコンソール > Project Settings > General下部 |
 | `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | 同上 (`projectId.firebaseapp.com`) |
@@ -82,19 +108,11 @@ gcloud config set project [YOUR_PROJECT_ID]
 ### 4.2. デプロイコマンド
 以下のコマンドをコピーし、`[YOUR_PROJECT_ID]` や各APIキーの部分を実測値に書き換えて実行してください。
 
+> [!NOTE]
+> `.gcloudignore` ファイルを作成済みです。これにより `.env` や `secrets/`、`docs/` などの不要・機密ファイルはアップロード対象から除外されます。
+
 ```bash
-gcloud run deploy gourmet-app \
-  --source . \
-  --platform managed \
-  --region asia-northeast1 \
-  --allow-unauthenticated \
-  --set-env-vars HOTPEPPER_API_KEY=your_hotpepper_key \
-  --set-env-vars NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_key \
-  --set-env-vars NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com \
-  --set-env-vars NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id \
-  --set-env-vars NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_bucket \
-  --set-env-vars NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id \
-  --set-env-vars NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+gcloud run deploy ai-concierge-for-gourmet --source . --platform managed --region asia-northeast1 --allow-unauthenticated --set-env-vars HOTPEPPER_API_KEY=e220d6e950b2ee29 --set-env-vars GOOGLE_MAPS_API_KEY=AIzaSyAE8GGxGxEDzKqxj3xs9_bbJ2g2V-C5I7o --set-env-vars NEXT_PUBLIC_HOST=ai-concierge-for-gourmet-92486772260.asia-northeast1.run.app --set-env-vars GOOGLE_CLOUD_PROJECT=xenon-bivouac-479813-u1
 ```
 
 *   途中で `Artifact Registry API` の有効化を求められた場合は `y` を押してください。
@@ -121,10 +139,16 @@ firebase use [YOUR_PROJECT_ID]
 
 # Hosting設定のみデプロイ
 firebase deploy --only hosting
+
+# Firestoreルールのみデプロイ
+firebase deploy --only firestore:rules
 ```
 
 デプロイが完了すると、Hosting用のURLが表示されます（例: `https://[project-id].web.app`）。
 Cloud Runへの転送設定が効いているか、このURLにアクセスして確認してください。
+
+> [!important]
+> **セキュリティルールの適用**: `firebase deploy --only firestore:rules` を実行しないと、デフォルト設定（アクセス禁止、またはテストモードで期限切れ）のままとなり、アプリが動かないか、セキュリティリスクになります。必ず実行してください。
 
 ### 5.3. 独自ドメインの設定
 1.  Firebaseコンソール > **Build** > **Hosting** を開く。
@@ -145,3 +169,12 @@ HostingのURL（または設定した独自ドメイン）にアクセスしま�
 
 ## 7. トラブルシューティング
 （以下変更なし）
+
+## 8. 開発者限定で公開する方法
+- Cloud Run > サービス > セキュリティ より、「認証が必要」にチェックをいれる。公開したい場合は「公開アクセスを許可」にチェックを入れる。
+- 上記のチェックを入れることで、IAMユーザー限定のアクセスになる。
+- IAM認証を行うためには、所定をトークンをリクエストヘッダーに含める必要がある。
+- これを簡潔に行うため、gcloud ploxy を利用する。下記のコマンドを実行する。
+```bash
+gcloud run services proxy [サービス名] --project [プロジェクトID]
+```
