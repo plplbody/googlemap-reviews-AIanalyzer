@@ -54,6 +54,11 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Manually copy Google Cloud libraries that might be missing assets in standalone build
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@google-cloud ./node_modules/@google-cloud
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/google-gax ./node_modules/google-gax
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/google-auth-library ./node_modules/google-auth-library
+
 USER nextjs
 
 EXPOSE 3000

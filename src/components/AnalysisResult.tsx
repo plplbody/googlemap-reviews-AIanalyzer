@@ -5,15 +5,19 @@ import { searchAndAnalyze } from '@/server/actions/place';
 import { getGoogleMapsApiKey } from '@/server/actions/config';
 import { useState, useEffect } from 'react';
 import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
-import { Loader2, Star, TrendingUp, DollarSign, Coffee, Smile, MapPin, Briefcase, Heart, User, Users, Award, RefreshCw, Map, Utensils, Wine, Accessibility, CreditCard, Check, X, Sparkles } from 'lucide-react';
+import { Loader2, Star, TrendingUp, DollarSign, Coffee, Smile, MapPin, Briefcase, Heart, User, Users, Award, RefreshCw, Map, Utensils, Wine, Accessibility, CreditCard, Check, X, Sparkles, ExternalLink } from 'lucide-react';
+import { PlaceBadges } from '@/components/PlaceBadges';
+import { HotPepperCredit } from '@/components/HotPepperCredit';
 
 interface AnalysisResultProps {
     place: Place;
     focusedAxes?: string[];
+    focusedScenes?: string[];
     onToggleAxis?: (axis: string) => void;
+    onToggleScene?: (scene: string) => void;
 }
 
-export default function AnalysisResult({ place, focusedAxes = [], onToggleAxis }: AnalysisResultProps) {
+export default function AnalysisResult({ place, focusedAxes = [], focusedScenes = [], onToggleAxis, onToggleScene }: AnalysisResultProps) {
     const [activeTab, setActiveTab] = useState<'evaluation' | 'map'>('evaluation');
     const [apiKey, setApiKey] = useState('');
     const [isRetrying, setIsRetrying] = useState(false);
@@ -40,7 +44,7 @@ export default function AnalysisResult({ place, focusedAxes = [], onToggleAxis }
             <div className="flex flex-col items-center justify-center p-12 space-y-4 animate-pulse">
                 <Loader2 className="w-12 h-12 text-rose-500 animate-spin" />
                 <p className="text-xl text-slate-800 font-medium">AIが分析中...</p>
-                <p className="text-sm text-slate-500">数千件のレビューから真実を抽出しています</p>
+                <p className="text-sm text-slate-500">口コミを分析し、真実を抽出しています</p>
             </div>
         );
     }
@@ -63,9 +67,10 @@ export default function AnalysisResult({ place, focusedAxes = [], onToggleAxis }
 
     // Personalized Score Calculation
     const calculatePersonalizedScore = () => {
-        if (!place.axisScores || focusedAxes.length === 0) return null;
+        if (!place.axisScores || (focusedAxes.length === 0 && focusedScenes.length === 0)) return null;
 
         const scores = place.axisScores;
+        const usage = place.usageScores || {};
         let totalScore = 0;
         let totalWeight = 0;
 
@@ -76,11 +81,23 @@ export default function AnalysisResult({ place, focusedAxes = [], onToggleAxis }
             'cost': scores.cost
         };
 
+        // Standard Axes (Always included: Weight 1 or 3)
         ['taste', 'service', 'atmosphere', 'cost'].forEach(axis => {
             const score = axesMap[axis] || 0;
             const weight = focusedAxes.includes(axis) ? 3 : 1;
             totalScore += score * weight;
             totalWeight += weight;
+        });
+
+        // Usage Scenarios (Included ONLY if focused: Weight 3)
+        ['business', 'date', 'solo', 'family', 'group'].forEach(scene => {
+            if (focusedScenes.includes(scene)) {
+                // usageScores might be missing or partial
+                const score = usage[scene as keyof typeof usage] || 0;
+                const weight = 3;
+                totalScore += score * weight;
+                totalWeight += weight;
+            }
         });
 
         return totalScore / totalWeight;
@@ -100,98 +117,43 @@ export default function AnalysisResult({ place, focusedAxes = [], onToggleAxis }
 
             {/* Header Section: Name & Badges */}
             <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-8 md:p-10">
-                <div className="flex flex-col gap-6">
-                    <div className="flex items-center gap-2 text-slate-500 text-sm font-medium">
-                        <MapPin className="w-4 h-4" />
-                        <span>Google Maps 掲載店</span>
+                <div className="flex flex-col gap-4">
+                    {/* Name & Image Row */}
+
+                    {/* Name & Image Row */}
+                    <div className="flex flex-col md:flex-row md:items-center gap-6">
+                        {place.hotpepper?.imageUrl && (
+                            <div className="w-24 h-24 md:w-32 md:h-32 rounded-xl overflow-hidden shadow-sm border border-slate-100 shrink-0">
+                                <img
+                                    src={place.hotpepper.imageUrl}
+                                    alt={place.name}
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                        )}
+                        <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+                            {place.name}
+                        </h2>
                     </div>
-                    <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">{place.name}</h2>
 
                     {/* Badges */}
-                    <div className="flex flex-wrap gap-2">
-                        {(() => {
-                            // 1. Try Price Range
-                            if (place.priceRange) {
-                                const start = place.priceRange.startPrice?.units;
-                                const end = place.priceRange.endPrice?.units;
-                                if (start || end) {
-                                    const label = `${start ? '¥' + Number(start).toLocaleString() : ''} ~ ${end ? '¥' + Number(end).toLocaleString() : ''}`;
+                    <PlaceBadges place={place} />
 
-                                    let color = 'bg-slate-500 text-white shadow-sm';
-                                    let prefix = '';
-                                    const price = Number(start || end || 0);
-
-                                    if (price >= 10000) {
-                                        color = 'bg-rose-600 text-white shadow-sm shadow-rose-200';
-                                        prefix = '最高級';
-                                    } else if (price >= 3000) {
-                                        color = 'bg-orange-500 text-white shadow-sm shadow-orange-200';
-                                        prefix = '高級';
-                                    } else if (price >= 1000) {
-                                        color = 'bg-blue-500 text-white shadow-sm shadow-blue-200';
-                                        prefix = '標準';
-                                    } else {
-                                        color = 'bg-emerald-500 text-white shadow-sm shadow-emerald-200';
-                                        prefix = 'お手頃';
-                                    }
-
-                                    return (
-                                        <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-wide shadow-sm border ${color}`}>
-                                            <DollarSign className="w-3 h-3" />
-                                            <span>{prefix} ({label})</span>
-                                        </div>
-                                    );
-                                }
-                            }
-
-                            // 2. Try Price Level
-                            const info = getPriceLevelInfo(place.priceLevel);
-                            if (!info) return null;
-                            return (
-                                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-wide shadow-sm border ${info.color}`}>
-                                    <DollarSign className="w-3 h-3" />
-                                    <span>{info.label}</span>
-                                </div>
-                            );
-                        })()}
-                        {place.usageScores?.business && place.usageScores.business >= 4.0 && (
-                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 text-white text-xs font-bold tracking-wide shadow-sm">
-                                <Briefcase className="w-3 h-3" />
-                                <span>ビジネス</span>
-                            </div>
-                        )}
-                        {place.usageScores?.date && place.usageScores.date >= 4.0 && (
-                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500 text-white text-xs font-bold tracking-wide shadow-sm shadow-rose-200">
-                                <Heart className="w-3 h-3 fill-current" />
-                                <span>デート</span>
-                            </div>
-                        )}
-                        {place.usageScores?.solo && place.usageScores.solo >= 4.0 && (
-                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-600 text-white text-xs font-bold tracking-wide shadow-sm shadow-emerald-200">
-                                <User className="w-3 h-3" />
-                                <span>お一人様</span>
-                            </div>
-                        )}
-                        {place.usageScores?.family && place.usageScores.family >= 4.0 && (
-                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500 text-white text-xs font-bold tracking-wide shadow-sm shadow-orange-200">
-                                <Users className="w-3 h-3" />
-                                <span>ファミリー</span>
-                            </div>
-                        )}
-                        {place.axisScores?.taste && place.axisScores.taste >= 4.5 && (
-                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400 text-white text-xs font-bold tracking-wide shadow-sm shadow-amber-200">
-                                <Award className="w-3 h-3" />
-                                <span>美食家認定</span>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Contact Info */}
+                    {/* Contact Info (Address, Access, Map Link) */}
                     <div className="flex flex-col gap-2 text-sm text-slate-600 mt-2">
                         {place.address && (
                             <div className="flex items-center gap-2">
                                 <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
                                 <span>{place.address}</span>
+                            </div>
+                        )}
+
+                        {/* HotPepper Access Info */}
+                        {/* Nearest Station Info (Prioritized) */}
+                        {(place.nearestStation || place.hotpepper?.access) && (
+                            <div className="flex items-center gap-2">
+                                <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
+                                <span>{place.nearestStation || place.hotpepper?.access}</span>
                             </div>
                         )}
 
@@ -206,6 +168,33 @@ export default function AnalysisResult({ place, focusedAxes = [], onToggleAxis }
                                 Google Mapで見る
                             </a>
                         </div>
+                    </div>
+
+                    {/* Actions: Reservations */}
+                    <div className="mt-6 flex flex-wrap gap-3">
+                        {/* HotPepper */}
+                        {place.hotpepper?.url && (
+                            <a
+                                href={place.hotpepper.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-6 py-3 bg-[#FF0033] hover:bg-[#D9002B] text-white font-bold rounded-full transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                            >
+                                <span>ホットペッパーで予約</span>
+                                <ExternalLink className="w-4 h-4" />
+                            </a>
+                        )}
+
+                        {/* Tabelog (Search) */}
+                        <a
+                            href={`https://tabelog.com/rstLst/?vs=1&sw=${encodeURIComponent(place.name)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-6 py-3 bg-[#FFC107] hover:bg-[#FFB300] text-white font-bold rounded-full transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                        >
+                            <span>食べログで予約</span>
+                            <ExternalLink className="w-4 h-4 text-white" />
+                        </a>
                     </div>
 
                     {/* Last Updated */}
@@ -268,37 +257,75 @@ export default function AnalysisResult({ place, focusedAxes = [], onToggleAxis }
             {/* Evaluation Tab Content */}
             {activeTab === 'evaluation' && (
                 <>
-                    {/* Axis Selection Control */}
-                    <div className="mb-8 p-6 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center gap-4">
-                        <p className="text-sm font-bold text-slate-500">
-                            重視するポイントを選択してスコアをパーソナライズ（最大2つ）
-                        </p>
-                        <div className="flex flex-wrap gap-3 justify-center">
-                            {[
-                                { id: 'taste', label: '味・料理', icon: Utensils },
-                                { id: 'service', label: '接客・サービス', icon: Heart },
-                                { id: 'atmosphere', label: '雰囲気・空間', icon: Sparkles },
-                                { id: 'cost', label: 'コスパ', icon: TrendingUp },
-                            ].map((axis) => {
-                                const isSelected = focusedAxes.includes(axis.id);
-                                return (
-                                    <button
-                                        key={axis.id}
-                                        onClick={() => onToggleAxis && onToggleAxis(axis.id)}
-                                        disabled={!onToggleAxis}
-                                        className={`
+                    {/* Axis & Scenario Selection Control */}
+                    <div className="mb-8 p-6 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center gap-6">
+                        <div className="text-center">
+                            <p className="text-sm font-bold text-slate-500 mb-2">
+                                重視するポイント（複数選択可）
+                            </p>
+                            <div className="flex flex-wrap gap-3 justify-center">
+                                {[
+                                    { id: 'taste', label: '味・料理', icon: Utensils },
+                                    { id: 'service', label: '接客・サービス', icon: Heart },
+                                    { id: 'atmosphere', label: '雰囲気・空間', icon: Sparkles },
+                                    { id: 'cost', label: 'コスパ', icon: TrendingUp },
+                                ].map((axis) => {
+                                    const isSelected = focusedAxes.includes(axis.id);
+                                    return (
+                                        <button
+                                            key={axis.id}
+                                            onClick={() => onToggleAxis && onToggleAxis(axis.id)}
+                                            disabled={!onToggleAxis}
+                                            className={`
                                        flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all duration-300 border shadow-sm
                                        ${isSelected
-                                                ? 'bg-[#E65100] text-white border-[#E65100] transform scale-105 shadow-md'
-                                                : 'bg-white text-slate-600 border-slate-200 hover:border-[#E65100] hover:text-[#E65100]'
-                                            }
+                                                    ? 'bg-[#E65100] text-white border-[#E65100] transform scale-105 shadow-md'
+                                                    : 'bg-white text-slate-600 border-slate-200 hover:border-[#E65100] hover:text-[#E65100]'
+                                                }
                                      `}
-                                    >
-                                        <axis.icon className="w-4 h-4" />
-                                        {axis.label}
-                                    </button>
-                                );
-                            })}
+                                        >
+                                            <axis.icon className="w-4 h-4" />
+                                            {axis.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="w-full border-t border-slate-200"></div>
+
+                        <div className="text-center">
+                            <p className="text-sm font-bold text-slate-500 mb-2">
+                                利用シーン（複数選択可）
+                            </p>
+                            <div className="flex flex-wrap gap-3 justify-center">
+                                {[
+                                    { id: 'business', label: 'ビジネス', icon: Briefcase },
+                                    { id: 'date', label: 'デート', icon: Heart },
+                                    { id: 'solo', label: 'お一人様', icon: User },
+                                    { id: 'family', label: 'ファミリー', icon: Users },
+                                    { id: 'group', label: '団体', icon: Users },
+                                ].map((scene) => {
+                                    const isSelected = focusedScenes.includes(scene.id);
+                                    return (
+                                        <button
+                                            key={scene.id}
+                                            onClick={() => onToggleScene && onToggleScene(scene.id)}
+                                            disabled={!onToggleScene}
+                                            className={`
+                                       flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all duration-300 border shadow-sm
+                                       ${isSelected
+                                                    ? 'bg-rose-600 text-white border-rose-600 transform scale-105 shadow-md'
+                                                    : 'bg-white text-slate-600 border-slate-200 hover:border-rose-600 hover:text-rose-600'
+                                                }
+                                     `}
+                                        >
+                                            <scene.icon className="w-4 h-4" />
+                                            {scene.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
 
@@ -473,6 +500,13 @@ export default function AnalysisResult({ place, focusedAxes = [], onToggleAxis }
 
                     {/* Basic Info Section */}
                     <BasicInfoSection place={place} />
+
+                    {/* HotPepper Credit */}
+                    {place.hotpepper && (
+                        <div className="pb-8">
+                            <HotPepperCredit />
+                        </div>
+                    )}
                 </>
             )}
         </div>
@@ -684,13 +718,4 @@ function formatDate(date: any): string {
 
 
 
-function getPriceLevelInfo(level: string | undefined) {
-    switch (level) {
-        case 'PRICE_LEVEL_FREE': return { label: '無料', color: 'bg-slate-500 text-white shadow-sm' };
-        case 'PRICE_LEVEL_INEXPENSIVE': return { label: 'お手頃 (~1,000円)', color: 'bg-emerald-500 text-white shadow-sm shadow-emerald-200' };
-        case 'PRICE_LEVEL_MODERATE': return { label: '標準 (1,000円~3,000円)', color: 'bg-blue-500 text-white shadow-sm shadow-blue-200' };
-        case 'PRICE_LEVEL_EXPENSIVE': return { label: '高級 (3,000円~10,000円)', color: 'bg-orange-500 text-white shadow-sm shadow-orange-200' };
-        case 'PRICE_LEVEL_VERY_EXPENSIVE': return { label: '最高級 (10,000円~)', color: 'bg-rose-600 text-white shadow-sm shadow-rose-200' };
-        default: return null;
-    }
-}
+

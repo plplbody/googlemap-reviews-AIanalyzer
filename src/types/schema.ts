@@ -15,9 +15,39 @@ export interface UsageScores {
   group: number;    // 団体利用
 }
 
+
+export interface HotPepperData {
+  id: string;
+  name: string;
+  url: string;
+  imageUrl?: string;
+  station?: string;
+  access?: string;
+  catchCopy?: string;
+  budgetAverage?: string;
+
+  // Flags
+  hasLunch?: string;
+  hasMidnight?: string;
+  hasChild?: string;
+  hasPet?: string;
+  hasParking?: string;
+  hasBarrierFree?: string;
+  hasWifi?: string;
+  hasCourse?: string;
+  hasFreeDrink?: string;
+  hasFreeFood?: string;
+  hasPrivateRoom?: string;
+  hasTatami?: string;
+  hasHorigotatsu?: string;
+  hasCard?: string;
+  hasEnglish?: string;
+}
+
 export interface Place {
   id: string; // Google Place ID
   name: string;
+  hotpepper?: HotPepperData; // Linked HotPepper Data
   address?: string;
   originalRating: number;
   userRatingsTotal: number;
@@ -27,6 +57,13 @@ export interface Place {
     endPrice?: { currencyCode: string; units: string; nanos?: number };
   };
   reviews?: string[]; // Array of review texts
+  
+  // Location Info
+  location?: {
+    lat: number;
+    lng: number;
+  };
+  nearestStation?: string; // e.g. "六本木駅 350m"
 
   // Detailed Info
   detailedInfo?: {

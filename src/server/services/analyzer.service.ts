@@ -4,8 +4,14 @@ import { Place, AnalysisStatus } from '@/types/schema';
 
 // Initialize Vertex AI lazily
 const getModel = () => {
+    const project = process.env.GOOGLE_CLOUD_PROJECT;
+    if (!project) {
+        throw new Error("GOOGLE_CLOUD_PROJECT environment variable is not set.");
+    }
+
+    // Gemini 2.0 Flash is currently available in us-central1
     const vertexAI = new VertexAI({
-        project: process.env.GOOGLE_CLOUD_PROJECT || 'demo-project',
+        project: project,
         location: 'us-central1'
     });
     return vertexAI.getGenerativeModel({ model: 'gemini-2.0-flash-001' });
@@ -70,7 +76,28 @@ export async function analyzePlace(placeId: string): Promise<void> {
         }
 
         // 3. Prepare Detailed Info Context
-        const detailedInfo = placeData.detailedInfo || {};
+        let detailedInfo: any = placeData.detailedInfo || {};
+
+        // Merge HotPepper Data if available
+        if (placeData.hotpepper) {
+            detailedInfo = {
+                ...detailedInfo,
+                hotpepper: {
+                    catchCopy: placeData.hotpepper.catchCopy,
+                    station: placeData.hotpepper.station,
+                    serviceFlags: {
+                        lunch: placeData.hotpepper.hasLunch,
+                        midnight: placeData.hotpepper.hasMidnight,
+                        child: placeData.hotpepper.hasChild,
+                        privateRoom: placeData.hotpepper.hasPrivateRoom,
+                        tatami: placeData.hotpepper.hasTatami,
+                        card: placeData.hotpepper.hasCard,
+                        parking: placeData.hotpepper.hasParking
+                    }
+                }
+            };
+        }
+
         const detailedInfoText = JSON.stringify(detailedInfo, null, 2);
 
         // 4. Call Gemini API
@@ -104,6 +131,12 @@ export async function analyzePlace(placeId: string): Promise<void> {
          | | \`restroom\` | \`true\` | **Service +**: Basic comfort | **Group +**: Essential for long stay. |
          | **Price** | \`priceLevel\` | \`High\` | **Cost -**: Expensive | **Business/Date +**: Luxurious. **Group -**: Not for casual. |
          | | | \`Low\` | **Cost +**: Cheap | **Solo/Student +**. **Business/Date -**: Too casual? |
+
+         | | | \`Credit / Digital\` | **Service +**: Convenient | **Business/Group +**: Smooth payment. |
+         | **HotPepper** | \`hotpepper.serviceFlags.child\` | \`お子様連れ歓迎\` (or similar) | | **Family ++**: Verified Welcome. |
+         | | \`hotpepper.serviceFlags.privateRoom\` | \`あり\` | **Service +**: Privacy | **Business/Date/Group ++**: Strong verified amenity. |
+         | | \`hotpepper.serviceFlags.parking\` | \`あり\` | | **Family/Group +**: Great for car access. |
+         | | \`hotpepper.catchCopy\` | (Content) | **Taste/Atmosphere**: Use this text as EVIDENCE of store's intent/quality. | |
 
          **Strictly apply this logic.** If a field is explicitly \`false\`, do NOT apply the positive impact. If \`undefined\`, ignore.
 
