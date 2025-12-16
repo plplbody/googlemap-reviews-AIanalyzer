@@ -112,7 +112,7 @@ gcloud config set project [YOUR_PROJECT_ID]
 > `.gcloudignore` ファイルを作成済みです。これにより `.env` や `secrets/`、`docs/` などの不要・機密ファイルはアップロード対象から除外されます。
 
 ```bash
-gcloud run deploy ai-concierge-for-gourmet --source . --platform managed --region asia-northeast1 --allow-unauthenticated --set-env-vars HOTPEPPER_API_KEY=e220d6e950b2ee29 --set-env-vars GOOGLE_MAPS_API_KEY=AIzaSyAE8GGxGxEDzKqxj3xs9_bbJ2g2V-C5I7o --set-env-vars NEXT_PUBLIC_HOST=ai-concierge-for-gourmet-92486772260.asia-northeast1.run.app --set-env-vars GOOGLE_CLOUD_PROJECT=xenon-bivouac-479813-u1
+gcloud run deploy ai-concierge-for-gourmet --source . --platform managed --region asia-northeast1 --allow-unauthenticated --set-env-vars HOTPEPPER_API_KEY=xxx --set-env-vars GOOGLE_MAPS_API_KEY=xxx --set-env-vars NEXT_PUBLIC_HOST={GCRのURL}--set-env-vars GOOGLE_CLOUD_PROJECT={プロジェクトID}
 ```
 
 *   途中で `Artifact Registry API` の有効化を求められた場合は `y` を押してください。
