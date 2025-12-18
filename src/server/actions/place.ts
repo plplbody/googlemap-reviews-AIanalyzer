@@ -6,8 +6,29 @@ import { enqueueAnalysis } from '@/lib/queue/client';
 import { Place } from '@/types/schema';
 import { searchHotPepperPlace } from '@/lib/hotpepper/client';
 
+import { checkRateLimit } from '@/lib/security/rate-limit';
+
+const MAX_QUERY_LENGTH = 100;
+
+function sanitizeLog(text: string): string {
+    // Mask Email
+    text = text.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL]');
+    // Mask Phone (simple digits check, conservative)
+    text = text.replace(/\b\d{10,11}\b/g, '[PHONE]');
+    return text;
+}
+
 export async function searchAndAnalyze(query: string): Promise<string> {
-    console.log(`Analyzing place: ${query}`);
+    // Security: Input Length Validation
+    if (query.length > MAX_QUERY_LENGTH) {
+        console.warn(`[Security] Query too long: ${query.length} chars. Truncated.`);
+        // Option: Truncate or Throw. Throwing is safer/clearer for UI feedback if handled, but truncating is friendlier.
+        // Let's throw to prevent misuse.
+        throw new Error(`検索キーワードが長すぎます（最大${MAX_QUERY_LENGTH}文字）`);
+    }
+
+    const sanitizedQuery = sanitizeLog(query);
+    console.log(`Analyzing place: ${sanitizedQuery}`);
     const placeId = query; // In the new flow, query is the placeId
 
     const docRef = getFirestore().collection('places').doc(placeId);
@@ -189,6 +210,9 @@ export interface PlaceSearchResponse {
 }
 
 export async function searchPlaces(query: string, pageToken?: string): Promise<PlaceSearchResponse> {
+    // Security: Rate Limit
+    await checkRateLimit();
+
     console.log(`Searching places list for: ${query}, pageToken: ${pageToken ? 'Yes' : 'No'}`);
 
     try {

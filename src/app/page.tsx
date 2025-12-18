@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { doc, onSnapshot } from "firebase/firestore";
 import { firestore } from "@/lib/firebase/client";
@@ -231,7 +232,15 @@ function HomeContent() {
     };
 
     fetchData();
+    fetchData();
   }, [viewState, query, placeId]);
+
+  // Scroll to top when switching to DETAIL view
+  useEffect(() => {
+    if (viewState === "DETAIL") {
+      window.scrollTo(0, 0);
+    }
+  }, [viewState]);
 
   // 詳細表示時のリアルタイムリスナー
   useEffect(() => {
@@ -320,12 +329,9 @@ function HomeContent() {
           AI Concierge <span className="text-xs font-normal opacity-80 ml-1">for グルメ</span>
         </div>
         <div className="hidden md:flex gap-8 text-sm font-medium tracking-wide items-center">
-          <span className="cursor-pointer hover:text-[#E65100] transition-colors">
-            COLLECTIONS
-          </span>
-          <span className="cursor-pointer hover:text-[#E65100] transition-colors">
+          <Link href="/about" className="cursor-pointer hover:text-[#E65100] transition-colors">
             ABOUT
-          </span>
+          </Link>
           {user ? (
             <div className="flex items-center gap-4">
               <span className="text-xs opacity-80">{user.displayName}</span>
@@ -361,12 +367,9 @@ function HomeContent() {
         {/* Mobile Menu Overlay */}
         {isMobileMenuOpen && (
           <div className="absolute top-full left-0 w-full bg-white/95 backdrop-blur-md shadow-lg p-6 flex flex-col gap-6 md:hidden animate-in slide-in-from-top-2 duration-200">
-            <span className="text-slate-900 font-bold tracking-wider cursor-pointer hover:text-[#E65100]" onClick={() => setIsMobileMenuOpen(false)}>
-              COLLECTIONS
-            </span>
-            <span className="text-slate-900 font-bold tracking-wider cursor-pointer hover:text-[#E65100]" onClick={() => setIsMobileMenuOpen(false)}>
+            <Link href="/about" className="text-slate-900 font-bold tracking-wider cursor-pointer hover:text-[#E65100]" onClick={() => setIsMobileMenuOpen(false)}>
               ABOUT
-            </span>
+            </Link>
             {user ? (
               <div className="flex flex-col gap-4 border-t pt-4 border-slate-200">
                 <span className="text-sm text-slate-500">Login as {user.displayName}</span>

@@ -72,7 +72,7 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
     return (
         <div
             onClick={() => onSelect(place.id)}
-            className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-xl border border-slate-100 transition-all duration-300 cursor-pointer group flex flex-col h-full"
+            className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-xl border border-slate-100 transition-all duration-300 cursor-pointer group flex flex-col h-full select-none active:scale-[0.98] active:bg-slate-50"
         >
             {/* Image & Header Section */}
             <div className="flex gap-4 mb-4">
@@ -92,12 +92,6 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
                             <h3 className="text-xl font-bold text-slate-900 group-hover:text-orange-600 transition-colors line-clamp-2 md:line-clamp-1 mb-1">
                                 {place.name}
                             </h3>
-                            {place.hotpepper?.station && (
-                                <div className="inline-flex items-center gap-1 text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md mb-2">
-                                    <span className="text-orange-500">🚉</span>
-                                    {place.hotpepper.station}
-                                </div>
-                            )}
                         </div>
                         <div className="flex flex-col items-end shrink-0 ml-2">
                             <div className="text-[10px] text-slate-400 font-bold mb-0.5 tracking-wide">GOOGLE</div>

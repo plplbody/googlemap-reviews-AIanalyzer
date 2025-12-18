@@ -82,6 +82,12 @@ export function PlaceBadges({ place }: { place: Place }) {
                     <span>ファミリー</span>
                 </div>
             )}
+            {place.usageScores?.group && place.usageScores.group >= 4.0 && (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200 text-xs font-bold tracking-wide shadow-sm">
+                    <Users className="w-3 h-3 text-slate-500" />
+                    <span>団体・宴会</span>
+                </div>
+            )}
         </div>
     );
 }

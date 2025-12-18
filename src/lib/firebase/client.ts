@@ -17,7 +17,8 @@ const firestore = getFirestore(app);
 const auth = getAuth(app);
 
 // Connect to Emulator in Dev
-if (process.env.NODE_ENV === 'development') {
+// Connect to Emulator in Dev (Only if explicitly enabled)
+if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true') {
     try {
         const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
         connectFirestoreEmulator(firestore, host, 8080);
