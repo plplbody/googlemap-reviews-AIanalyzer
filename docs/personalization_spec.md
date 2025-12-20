@@ -38,6 +38,10 @@
     *   `[Good]` (Thumbs Up / Heart Icon)
 
 #### 2. マイページ「自分だけのお店ノート」 (`/profile`)
+ユーザー自身が積極的に好みを設定・管理する場所。
+*   **基本プロファイル設定 (New)**:
+    *   **よく行くエリア (Favorite Areas)**: フォーム入力または選択式。「新宿」「渋谷」など。
+    *   **好きなジャンル (Favorite Genres)**: 選択式（マスタージャンル一覧から選択）。
 *   **傾向分析セクション (Editable)**:
     *   **レーダーチャート**: 4軸（味・接客・雰囲気・コスパ）の重視度（ドラッグ編集可）。
     *   **好みタグ (Fav Tags)**: 学習した特徴量（例：「静寂重視」「こってり派」）を表示・削除可能。
@@ -64,10 +68,26 @@ interface UserProfile {
     cost: number;
   };
   // Vector Profile (マスター特徴量に対する重み)
-  // key: feature_key (e.g., 'noise_level'), value: weight (-inf to inf)
-  featureAffinities: Record<string, number>;
+  featureAffinities: Record<string, number>; // key: feature_key, value: weight
+
+  // Explicit User Preferences (自己申告)
+  favoriteAreas: string[];  // e.g. ["Shinjuku", "Ginza"]
+  favoriteGenres: string[]; // e.g. ["Ramen", "Italian"]
   
   updatedAt: Timestamp;
+}
+```
+
+### Place (`places/{placeId}`) - Additions
+```typescript
+interface Place {
+  // ... existing fields ...
+  
+  // AI Extracted/API Context Data
+  area: string;        // Normalized Area (e.g. "Shinjuku-ku" from address_components)
+  genre: string[];     // Normalized Genres (API 'types' field, e.g. ["ramen_restaurant", "restaurant"])
+  
+  featureVector: Record<string, number>; // -1.0 to 1.0 matched to Master Keys
 }
 ```
 
@@ -92,35 +112,24 @@ interface Interaction {
 
 ### A. 特徴量マスターモデル (Master Feature Models)
 生成AIには以下の定義に基づき、各キーに対して **-1.0 (負の極) 〜 1.0 (正の極)** の値を振らせる。
+（表は前述の通り）
 
-#### 1. 味・品質 (Sensory & Visual)
-| キー (Key) | 特徴量名 | 負の極 (-1.0) | 正の極 (+1.0) |
-| :--- | :--- | :--- | :--- |
-| `flavor_strength` | **味の濃淡** | あっさり / 淡白 | こってり / 濃厚 |
-| `spiciness` | **辛さ・甘さ** | 甘め / マイルド | 辛い / スパイシー |
-| `volume` | **ボリューム** | 少なめ / 上品 | ガッツリ / 大盛り |
-| `innovation` | **創作性** | 王道 / 伝統的 | 創作 / 前衛的 |
-| `visual_impact` | **映え度** | 実質本位 / 素朴 | 映え / フォトジェニック |
+### B. エリア・ジャンルの正規化 (Normalization Logic)
 
-#### 2. サービス (SERVQUAL)
-| キー (Key) | 特徴量名 | 負の極 (-1.0) | 正の極 (+1.0) |
-| :--- | :--- | :--- | :--- |
-| `staff_distance` | **接客距離** | 放任 / プライベート | 親密 / フレンドリー |
-| `service_speed` | **提供速度** | ゆったり / スロー | スピーディ / 早い |
-| `formality` | **フォーマル度** | カジュアル / フランク | 礼儀正しい / 厳格 |
+Google Places API の構造化データを活用し、AI推定による表記ゆれを排除するとともに、処理コストを削減する。
 
-#### 3. 雰囲気 (Servicescapes)
-| キー (Key) | 特徴量名 | 負の極 (-1.0) | 正の極 (+1.0) |
-| :--- | :--- | :--- | :--- |
-| `noise_level` | **賑わい度** | 静寂 / 閑静 | 賑やか / 活気 |
-| `lighting` | **照明照度** | 暗め / ムーディ | 明るい / 開放的 |
-| `interior_style` | **新旧感** | レトロ / 老舗 / 昭和 | モダン / 最新 / 洗練 |
-| `privacy` | **開放感** | 個室 / 隠れ家 | オーープン / 開放的 |
+#### 1. ジャンル (Genre)
+Google Places API の `types` (または `primaryType`) フィールドをそのまま保存・利用する。
+*   **Target Field**: `types` 配列 (例: `["ramen_restaurant", "restaurant", "food"]`)。
+*   **Logic**:
+    *   AI生成は行わず、APIから取得した `types` 配列を `genre` フィールドに格納する。
+    *   フィルタリング時は、この配列内にユーザーが指定したジャンル（例: `ramen_restaurant`）が含まれているかで判定する。
 
-#### 4. コスパ
-| キー (Key) | 特徴量名 | 負の極 (-1.0) | 正の極 (+1.0) |
-| :--- | :--- | :--- | :--- |
-| `price_class` | **価格帯印象** | 格安 / リーズナブル | 高級 / ハイエンド |
+#### 2. エリア (Area)
+Google Places API の `address_components` フィールドから、行政区画（市区町村）を直接取得して保存する。
+*   **Target Field**: `locality` (市/区) または `administrative_area_level_1` (都道府県) + `locality`。
+*   **保存形式**: `"Shinjuku City", "Minato City"` などのAPI標準値をそのまま `area` として保存。
+*   これにより、住所文字列解析やAI推論を行うことなく、正規化されたエリア情報を保持できる。
 
 ## 6. AIスコア計算ロジック (Calculation Logic)
 
@@ -195,21 +204,22 @@ $$S_{final} = \alpha \cdot S_{qual} + (1 - \alpha) \cdot S_{pref}$$
 **目的**: ユーザー自身も気づいていない「好みに合うが、検索したことがない店」を、AIが能動的に提案する（Serendipityの創出）。
 
 ### A. 機能概要
-Firestore の Vector Search 機能を利用し、ユーザーのベクトル ($V_{user}$) と近い特徴量を持つ店舗を、データベース全体（または指定エリア・ジャンル内）から抽出・提案する。
+Firestore の Vector Search (KNN) 機能を利用し、ユーザーのベクトル ($V_{user}$) と近い特徴量を持つ店舗を、データベース全体（または指定エリア・ジャンル内）から抽出・提案する。
 
 ### B. "Recommended for You" フロー
 
 1.  **Input (Context)**:
-    *   ユーザーベクトル ($V_{user}$): 最新の好みプロファイル。
-    *   コンテキストフィルター: ユーザーが選択した「今の気分（ジャンル）」や「エリア」。
-        *   例: 「今日は【新宿】で【ラーメン】の気分だけど、いつもの店はいやだ」
+    *   **ベース**: ユーザーの `featureAffinities`。
+    *   **フィルター**:
+        *   Profileに保存された `favoriteAreas` と `favoriteGenres` をデフォルトとして提示。
+        *   ユーザーは「今日は気分を変えてエリア: 銀座」のように変更可能。
 
 2.  **Vector Search Execution**:
-    Firestore `findNearest` クエリを実行し、**特徴量的な距離が近い順** に店舗候補を取得する。
     ```typescript
     // 擬似コード
     const candidates = await store.collection('places')
-      .where('area', '==', 'Shinjuku') 
+      .where('majorGenre', 'in', selectedGenres) // 正規化されたジャンルでフィルタ
+      .where('area', 'in', selectedAreas)        // 正規化されたエリアでフィルタ
       .findNearest('featureVector', userVector, { limit: 10, distanceMeasure: 'COSINE' });
     ```
     
@@ -221,4 +231,20 @@ Firestore の Vector Search 機能を利用し、ユーザーのベクトル ($V
     *   バッジ: 「Match度: 95%」
     *   理由: 「あなたの好む #濃厚 #こってり な傾向にマッチしています」と添えて提示。
 
-これにより、検索キーワードに依存しない、純粋な感性マッチングによる店舗との出会いを提供する。
+## 9. 技術的実装要件とリスク (Technical Implementation & Risks)
+
+### A. 実装要件 (Technical Requirements)
+1.  **Firestore Vector Search**:
+    *   Firestoreのインデックス設定で、`featureVector` フィールドに対して「Vector Index」を作成する必要がある。
+    *   これらはコンソールまたはTerraform等でプロビジョニングする必要がある（現在ベータ機能の可能性大）。
+2.  **ベクトル更新の非同期処理**:
+    *   ユーザーがGood/Badを押した瞬間にリアルタイムで全件再計算するのはコストが高い。
+    *   `V_user` の更新はクライアントまたはサーバーアクションで行い、Vector Searchは「検索時」にその時点の `V_user` を利用するオンデマンド方式とする。
+
+### B. 技術的リスク (Risks)
+1.  **インデックス作成の制限**:
+    *   FirestoreのVector Indexには作成数やサイズの制限がある場合がある。大規模データになった際、パーティション化（エリアごと等）が必要になる可能性がある。
+2.  **コールドスタート問題**:
+    *   新規ユーザーは `V_user` がゼロの状態であり、マッチングが機能しない。初期設定で「好きな雰囲気」等をいくつか選ばせるオンボーディングが必要となる可能性がある（今回はデフォルト値を0として扱う）。
+3.  **APIコスト**:
+    *   Vector Search自体への課金モデルを確認する必要がある（Read数としてカウントされるか等）。
