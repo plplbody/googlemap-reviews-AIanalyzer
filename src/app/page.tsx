@@ -5,10 +5,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { doc, onSnapshot } from "firebase/firestore";
 import { firestore } from "@/lib/firebase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import SearchInput from "@/components/ui/SearchInput";
 import AnalysisResult from "@/components/AnalysisResult";
 
+import Header from "@/components/Header";
 import PlaceList from "@/components/PlaceList";
 import { Place } from "@/types/schema";
 import {
@@ -17,8 +17,7 @@ import {
   PlaceSearchResult,
 } from "@/server/actions/place";
 import { useRealtimePlaces } from "@/hooks/useRealtimePlaces";
-import { Utensils, Award, Sparkles, TrendingUp, ArrowLeft, Heart, ListFilter, Star, Menu, X } from "lucide-react";
-
+import { Utensils, Award, Sparkles, TrendingUp, ArrowLeft, Heart, ListFilter, Star } from "lucide-react";
 
 
 type ViewState = "HOME" | "LIST" | "DETAIL";
@@ -38,11 +37,7 @@ function HomeContent() {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   // Sort State
-  // Sort State
   const [sortBy, setSortBy] = useState<'match' | 'ai' | 'google'>('ai');
-  // Mobile Menu & Auth State
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user, signInWithGoogle, signOut } = useAuth();
 
   // Initialize state from URL on first load
   const [focusedAxes, setFocusedAxes] = useState<string[]>(() => {
@@ -320,77 +315,7 @@ function HomeContent() {
 
   return (
     <main className="min-h-screen bg-[#FAFAFA] text-[#1A1A1A] font-serif selection:bg-[#E65100]/20">
-      {/* ナビゲーションバー */}
-      <nav className={`absolute top-0 w-full z-50 p-6 flex justify-between items-center transition-colors duration-300 ${viewState === 'HOME' ? 'text-white' : 'text-slate-900'}`}>
-        <div
-          className="text-2xl font-bold tracking-widest cursor-pointer"
-          onClick={resetHome}
-        >
-          AI Concierge <span className="text-xs font-normal opacity-80 ml-1">for グルメ</span>
-        </div>
-        <div className="hidden md:flex gap-8 text-sm font-medium tracking-wide items-center">
-          <Link href="/about" className="cursor-pointer hover:text-[#E65100] transition-colors">
-            ABOUT
-          </Link>
-          {user ? (
-            <div className="flex items-center gap-4">
-              <span className="text-xs opacity-80">{user.displayName}</span>
-              <button
-                onClick={signOut}
-                className="px-4 py-2 rounded-full border border-[#E65100] text-[#E65100] hover:bg-[#E65100] hover:text-white transition-all text-xs font-bold"
-              >
-                LOGOUT
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={signInWithGoogle}
-              className="cursor-pointer hover:text-[#E65100] transition-colors font-bold"
-            >
-              LOGIN
-            </button>
-          )}
-        </div>
-
-        {/* Mobile Menu Toggle */}
-        <button
-          className="md:hidden p-2"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        >
-          {isMobileMenuOpen ? (
-            <X className="w-6 h-6" />
-          ) : (
-            <Menu className="w-6 h-6" />
-          )}
-        </button>
-
-        {/* Mobile Menu Overlay */}
-        {isMobileMenuOpen && (
-          <div className="absolute top-full left-0 w-full bg-white/95 backdrop-blur-md shadow-lg p-6 flex flex-col gap-6 md:hidden animate-in slide-in-from-top-2 duration-200">
-            <Link href="/about" className="text-slate-900 font-bold tracking-wider cursor-pointer hover:text-[#E65100]" onClick={() => setIsMobileMenuOpen(false)}>
-              ABOUT
-            </Link>
-            {user ? (
-              <div className="flex flex-col gap-4 border-t pt-4 border-slate-200">
-                <span className="text-sm text-slate-500">Login as {user.displayName}</span>
-                <button
-                  onClick={() => { signOut(); setIsMobileMenuOpen(false); }}
-                  className="text-left text-[#E65100] font-bold tracking-wider cursor-pointer"
-                >
-                  LOGOUT
-                </button>
-              </div>
-            ) : (
-              <span
-                className="text-slate-900 font-bold tracking-wider cursor-pointer hover:text-[#E65100]"
-                onClick={() => { signInWithGoogle(); setIsMobileMenuOpen(false); }}
-              >
-                LOGIN
-              </span>
-            )}
-          </div>
-        )}
-      </nav>
+      <Header viewState={viewState} onResetHome={resetHome} />
 
       {/* ヒーローセクション（ホーム画面でのみ表示） */}
       {viewState === "HOME" && (

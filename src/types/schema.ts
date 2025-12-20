@@ -57,7 +57,7 @@ export interface Place {
     endPrice?: { currencyCode: string; units: string; nanos?: number };
   };
   reviews?: string[]; // Array of review texts
-  
+
   // Location Info
   location?: {
     lat: number;
@@ -112,6 +112,14 @@ export interface Place {
     cost: { pros: string[]; cons: string[]; summary: string; };
   };
 
+  // AI Feature Extraction (Recommendation Engine)
+  area?: string; // Standardized area (e.g. "Ginza")
+  genre?: string; // Standardized genre (e.g. "Ramen")
+  featureTags?: {
+    tag: string; // e.g. "Rich Soup"
+    axis: 'taste' | 'service' | 'atmosphere' | 'cost';
+  }[];
+
   analysisStats?: {
     totalReviewsFetched: number;
     validReviews: number;
@@ -123,3 +131,4 @@ export interface Place {
   createdAt: Date;
   updatedAt: Date;
 }
+
