@@ -5,24 +5,29 @@ import { Star, MapPin, ChevronRight, Loader2, Train } from 'lucide-react';
 import { PlaceBadges } from '@/components/PlaceBadges';
 import { updateStationInfo } from '@/server/actions/station';
 import { useEffect, useState } from 'react';
+import { ActionButtons } from '@/components/ActionButtons';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PlaceListItemProps {
     place: Place;
     onSelect: (placeId: string) => void;
     focusedAxes?: string[];
     focusedScenes?: string[];
+    personalizedScore?: number;
+    onActionComplete?: () => void;
 }
 
-export default function PlaceListItem({ place, onSelect, focusedAxes = [], focusedScenes = [] }: PlaceListItemProps) {
+export default function PlaceListItem({ place, onSelect, focusedAxes = [], focusedScenes = [], onActionComplete, ...props }: PlaceListItemProps) {
+    const { user } = useAuth();
     const isAnalyzed = place.status === 'completed' && place.trueScore !== undefined;
     const isAnalyzing = place.status === 'pending' || place.status === 'processing';
 
     // Personalized Score Calculation
     const calculatePersonalizedScore = () => {
-        if (!place.axisScores || (focusedAxes.length === 0 && focusedScenes.length === 0)) return null;
+        // Only calculate personalized score if AXES are selected. Scenarios are now filters only.
+        if (!place.axisScores || focusedAxes.length === 0) return null;
 
         const scores = place.axisScores;
-        const usage = place.usageScores || {};
         let totalScore = 0;
         let totalWeight = 0;
 
@@ -41,22 +46,12 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
             totalWeight += weight;
         });
 
-        // Usage Scenarios (Included ONLY if focused: Weight 3)
-        // If not focused, we don't include them to avoid diluting the score with irrelevant scenarios
-        ['business', 'date', 'solo', 'family', 'group'].forEach(scene => {
-            if (focusedScenes.includes(scene)) {
-                // usageScores might be missing or partial
-                const score = usage[scene as keyof typeof usage] || 0;
-                const weight = 3;
-                totalScore += score * weight;
-                totalWeight += weight;
-            }
-        });
+        // Scenarios removed from scoring logic
 
         return totalScore / totalWeight;
     };
 
-    const yourScore = calculatePersonalizedScore();
+    const yourScore = props.personalizedScore ?? calculatePersonalizedScore();
 
     // Async trigger for station info
     useEffect(() => {
@@ -72,8 +67,18 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
     return (
         <div
             onClick={() => onSelect(place.id)}
-            className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-xl border border-slate-100 transition-all duration-300 cursor-pointer group flex flex-col h-full select-none active:scale-[0.98] active:bg-slate-50"
+            className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-xl border border-slate-100 transition-all duration-300 cursor-pointer group flex flex-col h-full select-none active:scale-[0.98] active:bg-slate-50 relative"
         >
+            {/* Action Buttons (Absolute Top-Right for quick access) */}
+            <div
+                className="absolute top-4 right-4 z-10"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="scale-90 origin-top-right">
+                    <ActionButtons place={place} uid={user?.uid} onActionComplete={onActionComplete} />
+                </div>
+            </div>
+
             {/* Image & Header Section */}
             <div className="flex gap-4 mb-4">
                 {place.hotpepper?.imageUrl && (
@@ -88,18 +93,19 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
                 )}
                 <div className="flex-grow min-w-0">
                     <div className="flex justify-between items-start">
-                        <div>
+                        <div className="pr-24"> {/* Add padding for absolute buttons */}
                             <h3 className="text-xl font-bold text-slate-900 group-hover:text-orange-600 transition-colors line-clamp-2 md:line-clamp-1 mb-1">
                                 {place.name}
                             </h3>
                         </div>
-                        <div className="flex flex-col items-end shrink-0 ml-2">
-                            <div className="text-[10px] text-slate-400 font-bold mb-0.5 tracking-wide">GOOGLE</div>
-                            <div className="flex items-center bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
-                                <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400 mr-1" />
-                                <span className="font-bold text-slate-700 text-sm">{place.originalRating?.toFixed(1) || '0.0'}</span>
-                                <span className="text-[10px] text-slate-400 ml-1">({place.userRatingsTotal || 0})</span>
-                            </div>
+                    </div>
+                    {/* Google Badge */}
+                    <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                            <div className="text-[10px] text-slate-400 font-bold mr-1 tracking-wide">GOOGLE</div>
+                            <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400 mr-1" />
+                            <span className="font-bold text-slate-700 text-sm">{place.originalRating?.toFixed(1) || '0.0'}</span>
+                            <span className="text-[10px] text-slate-400 ml-1">({place.userRatingsTotal || 0})</span>
                         </div>
                     </div>
                 </div>
@@ -115,7 +121,7 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
                 {isAnalyzed ? (
                     <div className="flex flex-col gap-3">
                         {/* Personalized Score Display (Prominent if active) */}
-                        {yourScore ? (
+                        {yourScore !== null && yourScore >= 0 ? (
                             <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                                 <div className="flex items-center justify-between mb-2">
                                     <div>
@@ -147,7 +153,7 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
                                 <div>
                                     <span className="text-base font-bold text-[#E65100] block mb-1">AI分析スコア</span>
                                     <div className="flex items-baseline gap-2">
-                                        <span className="text-3xl font-black text-[#E65100]">
+                                        <span className="text-xl font-black text-[#E65100]">
                                             {place.trueScore?.toFixed(1)}
                                         </span>
                                         <div className="flex text-orange-500">

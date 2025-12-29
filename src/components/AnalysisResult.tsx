@@ -1,13 +1,15 @@
 'use client';
 
 import { Place } from '@/types/schema';
-import { searchAndAnalyze } from '@/server/actions/place';
+import { getPlaceDetails } from '@/server/actions/place';
 import { getGoogleMapsApiKey } from '@/server/actions/config';
 import { useState, useEffect } from 'react';
 import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 import { Loader2, Star, TrendingUp, DollarSign, Coffee, Smile, MapPin, Briefcase, Heart, User, Users, Award, RefreshCw, Map, Utensils, Wine, Accessibility, CreditCard, Check, X, Sparkles, ExternalLink } from 'lucide-react';
 import { PlaceBadges } from '@/components/PlaceBadges';
 import { HotPepperCredit } from '@/components/HotPepperCredit';
+import { ActionButtons } from '@/components/ActionButtons';
+import { useAuth } from '@/lib/firebase/auth';
 
 interface AnalysisResultProps {
     place: Place;
@@ -15,12 +17,22 @@ interface AnalysisResultProps {
     focusedScenes?: string[];
     onToggleAxis?: (axis: string) => void;
     onToggleScene?: (scene: string) => void;
+    isAutoMode?: boolean;
+    personalScore?: {
+        trueScore: number;
+        matchScore: number;
+        finalScore: number;
+        isPersonalized: boolean; // True if user data was used
+    } | null;
 }
 
-export default function AnalysisResult({ place, focusedAxes = [], focusedScenes = [], onToggleAxis, onToggleScene }: AnalysisResultProps) {
+export default function AnalysisResult({ place, focusedAxes = [], focusedScenes = [], onToggleAxis, onToggleScene, isAutoMode = false, personalScore }: AnalysisResultProps) {
     const [activeTab, setActiveTab] = useState<'evaluation' | 'map'>('evaluation');
     const [apiKey, setApiKey] = useState('');
     const [isRetrying, setIsRetrying] = useState(false);
+
+    // Auth for Personalization
+    const { user } = useAuth();
 
     useEffect(() => {
         getGoogleMapsApiKey().then(key => {
@@ -32,7 +44,7 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
     const handleRetry = async () => {
         setIsRetrying(true);
         try {
-            await searchAndAnalyze(place.id);
+            await getPlaceDetails(place.id);
         } catch (error) {
             console.error("Retry failed:", error);
             setIsRetrying(false);
@@ -40,16 +52,18 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
     };
 
     if (place.status === 'pending' || place.status === 'processing' || isRetrying) {
+        // ...
         return (
             <div className="flex flex-col items-center justify-center p-12 space-y-4 animate-pulse">
                 <Loader2 className="w-12 h-12 text-rose-500 animate-spin" />
                 <p className="text-xl text-slate-800 font-medium">AIが分析中...</p>
-                <p className="text-sm text-slate-500">口コミを分析し、真実を抽出しています</p>
+                <p className="text-sm text-slate-500">口コミを分析しています</p>
             </div>
         );
     }
 
     if (place.status === 'error') {
+        // ...
         return (
             <div className="p-8 bg-red-50 border border-red-100 rounded-3xl text-center shadow-sm flex flex-col items-center gap-4">
                 <p className="text-red-600 font-medium">分析に失敗しました。時間をおいて再度お試しください。</p>
@@ -65,9 +79,19 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
         );
     }
 
-    // Personalized Score Calculation
-    const calculatePersonalizedScore = () => {
-        if (!place.axisScores || (focusedAxes.length === 0 && focusedScenes.length === 0)) return null;
+    // Determine the Match Score to display
+    const getMatchScore = () => {
+        // 1. Auto Mode: Use Server Calculated Personal Score
+        if (isAutoMode) {
+            return personalScore?.isPersonalized ? personalScore.finalScore : null;
+        }
+
+        // 2. Manual Mode: Use Client-Side Calculation based on Selection
+        // Excludes implicit user traits, strictly uses selected axes.
+        const activeAxes = focusedAxes.filter(a => a && a.trim().length > 0);
+        const activeScenes = focusedScenes.filter(s => s && s.trim().length > 0);
+
+        if (!place.axisScores || (activeAxes.length === 0 && activeScenes.length === 0)) return null;
 
         const scores = place.axisScores;
         const usage = place.usageScores || {};
@@ -81,18 +105,18 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
             'cost': scores.cost
         };
 
-        // Standard Axes (Always included: Weight 1 or 3)
+        // Standard Axes
         ['taste', 'service', 'atmosphere', 'cost'].forEach(axis => {
             const score = axesMap[axis] || 0;
+            // Only weight if explicitly selected
             const weight = focusedAxes.includes(axis) ? 3 : 1;
             totalScore += score * weight;
             totalWeight += weight;
         });
 
-        // Usage Scenarios (Included ONLY if focused: Weight 3)
+        // Usage Scenarios
         ['business', 'date', 'solo', 'family', 'group'].forEach(scene => {
             if (focusedScenes.includes(scene)) {
-                // usageScores might be missing or partial
                 const score = usage[scene as keyof typeof usage] || 0;
                 const weight = 3;
                 totalScore += score * weight;
@@ -103,7 +127,7 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
         return totalScore / totalWeight;
     };
 
-    const yourScore = calculatePersonalizedScore();
+    const yourScore = getMatchScore();
 
     const data = place.axisScores ? [
         { subject: '味', A: place.axisScores.taste, fullMark: 5 },
@@ -136,8 +160,13 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
                         </h2>
                     </div>
 
-                    {/* Badges */}
-                    <PlaceBadges place={place} />
+                    {/* Action Bar (Personalization) */}
+                    <div className="flex items-center justify-between">
+                        <PlaceBadges place={place} />
+                        <div className="ml-auto">
+                            <ActionButtons place={place} uid={user?.uid} />
+                        </div>
+                    </div>
 
                     {/* Contact Info (Address, Access, Map Link) */}
                     <div className="flex flex-col gap-2 text-sm text-slate-600 mt-2">

@@ -113,8 +113,17 @@ export interface Place {
   };
 
   // AI Feature Extraction (Recommendation Engine)
-  area?: string; // Standardized area (e.g. "Ginza")
-  genre?: string; // Standardized genre (e.g. "Ramen")
+  area?: string[]; // Standardized area hierarchy (e.g. ["Tokyo", "Shinjuku City"])
+  genre?: string[]; // Standardized genres from API Types (e.g. ["ramen_restaurant"])
+
+  // Master Feature Vector (-1.0 to 1.0)
+  featureVector?: Record<string, number>;
+
+  // Semantic Embedding (Vertex AI text-embedding-005)
+  embeddingSourceText?: string; // Logic: "[Name] is [Genre] in [Area]. [Tags]. [Summary]"
+  embeddingVector?: number[]; // 768-dim vector
+
+  // Keep for UI display (optional/derived)
   featureTags?: {
     tag: string; // e.g. "Rich Soup"
     axis: 'taste' | 'service' | 'atmosphere' | 'cost';

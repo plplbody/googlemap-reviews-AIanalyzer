@@ -6,7 +6,7 @@ import {
     User
 } from 'firebase/auth';
 import { auth, firestore } from './client';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { UserProfile } from '@/types/user';
 
@@ -28,7 +28,11 @@ export const signInWithGoogle = async () => {
                 displayName: user.displayName || 'No Name',
                 photoURL: user.photoURL || '',
                 createdAt: serverTimestamp() as any, // Cast for client-side compat
-                updatedAt: serverTimestamp() as any
+                updatedAt: serverTimestamp() as any,
+                aiPreferences: { taste: 0, service: 0, atmosphere: 0, cost: 0 },
+                featureAffinities: {},
+                favoriteAreas: [],
+                favoriteGenres: []
             };
             await setDoc(userRef, newProfile);
         }
@@ -52,27 +56,31 @@ export const signOut = async () => {
 // Auto-Sync User Profile Hook
 export function useUserProfile(user: User | null) {
     const [profile, setProfile] = useState<UserProfile | null>(null);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         if (!user) {
             setProfile(null);
+            setLoading(false);
             return;
         }
 
         setLoading(true);
         const userRef = doc(firestore, 'users', user.uid);
 
-        getDoc(userRef).then((snap) => {
+        const unsubscribe = onSnapshot(userRef, (snap) => {
             if (snap.exists()) {
                 setProfile(snap.data() as UserProfile);
+            } else {
+                setProfile(null);
             }
-        }).catch(err => {
-            console.error("Error fetching user profile", err);
-        }).finally(() => {
+            setLoading(false);
+        }, (error) => {
+            console.error("Error listening to user profile:", error);
             setLoading(false);
         });
 
+        return () => unsubscribe();
     }, [user]);
 
     return { profile, loading };

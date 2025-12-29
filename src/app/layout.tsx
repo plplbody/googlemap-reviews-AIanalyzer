@@ -14,6 +14,7 @@ export const metadata: Metadata = {
 };
 
 import { AuthProvider } from "@/contexts/AuthContext";
+import { SearchProvider } from "@/contexts/SearchContext";
 
 // アプリケーション全体のルートレイアウト
 export default function RootLayout({
@@ -24,7 +25,11 @@ export default function RootLayout({
     return (
         <html lang="ja" suppressHydrationWarning>
             <body className={`${shipporiMincho.className} antialiased`}>
-                <AuthProvider>{children}</AuthProvider>
+                <AuthProvider>
+                    <SearchProvider>
+                        {children}
+                    </SearchProvider>
+                </AuthProvider>
             </body>
         </html>
     );

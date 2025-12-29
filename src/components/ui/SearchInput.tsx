@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Search, Loader2, MapPin, Calendar } from 'lucide-react';
-import { searchAndAnalyze } from '@/server/actions/place';
+import { getPlaceDetails } from '@/server/actions/place';
 
 interface SearchInputProps {
     onSearchStart: () => void;
@@ -77,7 +77,7 @@ export default function SearchInput({ onSearchStart, onSearchComplete }: SearchI
                     onClick={() => setActiveField(null)}
                 />
             )}
-            <form onSubmit={handleSearch} className="relative z-10 flex items-center bg-white/80 backdrop-blur-md border border-white/20 rounded-full shadow-2xl hover:shadow-orange-500/20 transition-all duration-300 overflow-visible p-2 h-20 w-full group">
+            <form onSubmit={handleSearch} className="relative z-10 flex items-center bg-white/80 backdrop-blur-md border border-white/20 rounded-full shadow-lg hover:shadow-orange-500/20 transition-all duration-300 overflow-visible p-2 h-20 w-full group">
 
                 {/* キーワード入力欄 */}
                 <div className="flex-[1.2] flex flex-col justify-center px-4 border-r border-slate-200/50 hover:bg-white/50 transition-colors h-full">

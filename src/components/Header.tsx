@@ -25,52 +25,47 @@ export default function Header({ viewState, onResetHome }: HeaderProps) {
             </div>
 
             {/* Desktop Menu */}
-            <div className="hidden md:flex gap-8 text-sm font-medium tracking-wide items-center">
+            <div className="hidden md:flex gap-6 text-sm font-medium tracking-wide items-center">
                 <Link href="/about" className="cursor-pointer hover:text-[#E65100] transition-colors">
                     ABOUT
                 </Link>
+                {/* Gourmet Notebook (Favorites) Main Link */}
+                {user && (
+                    <Link
+                        href="/profile"
+                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#E65100] to-orange-500 text-white rounded-full shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5"
+                    >
+                        <Heart className="w-4 h-4 fill-white" />
+                        <span>グルメノート</span>
+                    </Link>
+                )}
+
                 {user ? (
                     <div className="relative">
                         <button
                             onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+                            className="flex items-center gap-2 hover:opacity-80 transition-opacity ml-2"
                         >
                             {user.photoURL ? (
-                                <img src={user.photoURL} alt={user.displayName || "User"} className="w-8 h-8 rounded-full border border-white/20" />
+                                <img src={user.photoURL} alt={user.displayName || "User"} className="w-9 h-9 rounded-full border border-white/20 shadow-sm" />
                             ) : (
-                                <div className="w-8 h-8 rounded-full bg-[#E65100] flex items-center justify-center text-white">
-                                    <UserIcon className="w-4 h-4" />
+                                <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-slate-500">
+                                    <UserIcon className="w-5 h-5" />
                                 </div>
                             )}
-                            <span className="text-xs opacity-90">{user.displayName}</span>
                         </button>
 
                         {/* Profile Dropdown */}
                         {isProfileMenuOpen && (
-                            <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-xl shadow-xl py-2 animate-in fade-in zoom-in-95 duration-200 border border-slate-100 overflow-hidden">
-                                <div className="px-4 py-2 border-b border-slate-50">
-                                    <p className="text-xs text-slate-400">Signed in as</p>
-                                    <p className="text-sm font-bold text-slate-700 truncate">{user.email}</p>
+                            <div className="absolute top-full right-0 mt-3 w-48 bg-white rounded-xl shadow-xl py-2 animate-in fade-in zoom-in-95 duration-200 border border-slate-100 overflow-hidden z-20">
+                                <div className="px-4 py-3 border-b border-slate-50">
+                                    <p className="text-xs text-slate-400 mb-1">Signed in as</p>
+                                    <p className="text-sm font-bold text-slate-800 truncate">{user.displayName}</p>
+                                    <p className="text-xs text-slate-500 truncate">{user.email}</p>
                                 </div>
-                                <Link
-                                    href="/profile"
-                                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-[#E65100] transition-colors"
-                                    onClick={() => setIsProfileMenuOpen(false)}
-                                >
-                                    <Heart className="w-4 h-4" />
-                                    お気に入り
-                                </Link>
-                                <Link
-                                    href="/history"
-                                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-[#E65100] transition-colors"
-                                    onClick={() => setIsProfileMenuOpen(false)}
-                                >
-                                    <Check className="w-4 h-4" />
-                                    行ったお店
-                                </Link>
                                 <button
                                     onClick={() => { signOut(); setIsProfileMenuOpen(false); }}
-                                    className="w-full text-left flex items-center gap-3 px-4 py-2.5 text-sm text-rose-500 hover:bg-rose-50 transition-colors border-t border-slate-50 mt-1"
+                                    className="w-full text-left flex items-center gap-3 px-4 py-3 text-sm text-rose-500 hover:bg-rose-50 transition-colors"
                                 >
                                     <LogOut className="w-4 h-4" />
                                     ログアウト
@@ -81,7 +76,7 @@ export default function Header({ viewState, onResetHome }: HeaderProps) {
                 ) : (
                     <button
                         onClick={() => signInWithGoogle()}
-                        className="cursor-pointer hover:text-[#E65100] transition-colors font-bold flex items-center gap-2"
+                        className="cursor-pointer hover:text-[#E65100] transition-colors font-bold flex items-center gap-2 ml-4"
                     >
                         LOGIN
                     </button>
@@ -108,24 +103,29 @@ export default function Header({ viewState, onResetHome }: HeaderProps) {
                     </Link>
                     {user ? (
                         <div className="flex flex-col gap-4 border-t pt-4 border-slate-200">
-                            <div className="flex items-center gap-3">
-                                {user.photoURL && <img src={user.photoURL} className="w-8 h-8 rounded-full" />}
+                            <div className="flex items-center gap-3 mb-2">
+                                {user.photoURL && <img src={user.photoURL} className="w-10 h-10 rounded-full" />}
                                 <div>
                                     <p className="text-sm font-bold text-slate-900">{user.displayName}</p>
                                     <p className="text-xs text-slate-400">{user.email}</p>
                                 </div>
                             </div>
-                            <Link href="/profile" className="flex items-center gap-2 text-slate-600" onClick={() => setIsMobileMenuOpen(false)}>
-                                <Heart className="w-4 h-4" />Favorites
+
+                            {/* Gourmet Notebook Mobile */}
+                            <Link
+                                href="/profile"
+                                className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-[#E65100] to-orange-500 text-white rounded-xl shadow-md font-bold justify-center"
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                                <Heart className="w-4 h-4 fill-white" />
+                                グルメノート（お気に入り・評価）
                             </Link>
-                            <Link href="/history" className="flex items-center gap-2 text-slate-600" onClick={() => setIsMobileMenuOpen(false)}>
-                                <Check className="w-4 h-4" />Visited
-                            </Link>
+
                             <button
                                 onClick={() => { signOut(); setIsMobileMenuOpen(false); }}
-                                className="text-left text-[#E65100] font-bold tracking-wider cursor-pointer flex items-center gap-2"
+                                className="text-left text-slate-500 font-medium cursor-pointer flex items-center gap-2 pl-2 mt-2"
                             >
-                                <LogOut className="w-4 h-4" /> LOGOUT
+                                <LogOut className="w-4 h-4" /> ログアウト
                             </button>
                         </div>
                     ) : (

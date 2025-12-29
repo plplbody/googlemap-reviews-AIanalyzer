@@ -11,18 +11,17 @@ interface PlaceListProps {
     loadingMore: boolean;
     focusedAxes?: string[];
     focusedScenes?: string[];
+    personalizedScores?: Record<string, { finalScore: number }>;
+    onActionComplete?: () => void;
 }
 
 // 検索結果のリストを表示するコンポーネント
-export default function PlaceList({ places, onSelect, onLoadMore, hasMore, loadingMore, focusedAxes, focusedScenes }: PlaceListProps) {
+export default function PlaceList({ places, onSelect, onLoadMore, hasMore, loadingMore, focusedAxes, focusedScenes, personalizedScores, onActionComplete }: PlaceListProps) {
     return (
         <div className="w-full max-w-6xl mx-auto px-4 py-8">
             <div className="mb-6 flex items-end justify-between">
                 <div>
                     <h2 className="text-2xl font-bold text-slate-900 mb-1">検索結果</h2>
-                    <p className="text-sm text-slate-500">
-                        検索キーワードに関連度の高い上位20件を表示しています
-                    </p>
                 </div>
                 {hasMore && (
                     <button
@@ -51,6 +50,8 @@ export default function PlaceList({ places, onSelect, onLoadMore, hasMore, loadi
                         onSelect={onSelect}
                         focusedAxes={focusedAxes}
                         focusedScenes={focusedScenes}
+                        personalizedScore={personalizedScores?.[place.id]?.finalScore}
+                        onActionComplete={onActionComplete}
                     />
                 ))}
             </div>
