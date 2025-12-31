@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, useRef } from "react";
+import { useState, useEffect, Suspense, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { doc, onSnapshot } from "firebase/firestore";
@@ -76,9 +76,8 @@ function HomeContent() {
   // Realtime Data Hook
   const { places: realtimePlaces } = useRealtimePlaces(cachedResults.map(p => p.id));
 
-  // Fetch Personalized Scores
   // Fetch Personalized Scores (Refactored for reuse)
-  const fetchScores = async (ids: string[]) => {
+  const fetchScores = useCallback(async (ids: string[]) => {
     try {
       if (ids.length === 0) return;
       const scores = await getPersonalizedScores(ids, user?.uid);
@@ -86,13 +85,13 @@ function HomeContent() {
     } catch (e) {
       console.error("Failed to fetch personalized scores", e);
     }
-  };
+  }, [user?.uid]);
 
   useEffect(() => {
     if (cachedResults.length > 0) {
       fetchScores(cachedResults.map(p => p.id));
     }
-  }, [cachedResults, user?.uid]);
+  }, [cachedResults, fetchScores]);
 
   // Handler for action completion (e.g. Save/Good/Bad)
   const handleActionComplete = async () => {
@@ -297,7 +296,7 @@ function HomeContent() {
   }, [searchParams]);
 
   // Move handleLoadMore here to be accessible by fetchData
-  const handleLoadMore = async (tokenOverride?: string) => {
+  const handleLoadMore = useCallback(async (tokenOverride?: string) => {
     const token = tokenOverride || cachedNextPageToken;
     // Note: checking cachedNextPageToken in closure might be stale if called immediately?
     // But tokenOverride solves this.
@@ -312,7 +311,7 @@ function HomeContent() {
     } finally {
       setLoadingMore(false);
     }
-  };
+  }, [cachedNextPageToken, loadingMore, query, appendResults]);
 
   // URLパラメータの変更を監視してデータを取得
   useEffect(() => {
