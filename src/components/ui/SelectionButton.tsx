@@ -22,19 +22,19 @@ export function SelectionButton({
 }: SelectionButtonProps) {
 
     // Base styles common to both
-    const baseStyles = "flex items-center justify-center gap-2 rounded-full text-sm font-bold transition-all duration-300";
+    const baseStyles = "flex items-center justify-center gap-2 rounded-full text-xs font-bold transition-all duration-300 ";
 
     // Variant specific styles
     const chipStyles = isSelected
-        ? "bg-[#E65100] text-white border border-[#E65100] shadow-md transform scale-105 px-4 py-2"
-        : "bg-white text-slate-600 border border-slate-200 hover:border-[#E65100] hover:text-[#E65100] px-4 py-2";
+        ? "bg-brand text-white border border-brand shadow-md transform scale-105 px-4 py-2 shadow-sm"
+        : "bg-white text-brand-black/80 border border-brand-gray hover:border-brand hover:text-brand px-4 py-2 shadow-sm";
 
     const segmentStyles = isSelected
-        ? "bg-[#E65100] text-white shadow-sm px-4 py-1.5"
-        : "text-slate-500 hover:bg-slate-50 hover:text-[#E65100] px-4 py-1.5";
+        ? "bg-brand text-white shadow-sm px-4 py-1.5"
+        : "text-brand-black/80 hover:bg-brand-gray/20 hover:text-brand px-4 py-1.5";
 
     const disabledStyles = disabled
-        ? "opacity-50 cursor-not-allowed pointer-events-none text-slate-300 bg-transparent hover:text-slate-300 hover:border-slate-200"
+        ? "opacity-50 cursor-not-allowed pointer-events-none text-brand-black/50 bg-transparent hover:text-brand-black/50 hover:border-brand-gray"
         : "";
 
     // Combine

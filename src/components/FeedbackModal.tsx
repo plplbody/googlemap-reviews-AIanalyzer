@@ -16,7 +16,7 @@ interface FeedbackModalProps {
 // Helper for Master Features
 const MASTER_FEATURES = [
     {
-        axis: 'taste', label: '味・料理', color: 'rose',
+        axis: 'taste', label: '味', color: 'rose',
         features: [
             { key: 'flavor_strength', label: '味の濃淡', high: 'こってりしすぎ', low: 'あっさりしすぎ' },
             { key: 'spiciness', label: '辛さ・甘さ', high: '辛すぎる', low: '甘すぎる' },
@@ -26,7 +26,7 @@ const MASTER_FEATURES = [
         ]
     },
     {
-        axis: 'service', label: '接客・サービス', color: 'orange',
+        axis: 'service', label: '接客', color: 'orange',
         features: [
             { key: 'staff_distance', label: '接客距離', high: '馴れ馴れしい', low: '冷たい・放置' },
             { key: 'service_speed', label: '提供速度', high: '早すぎて急かされる', low: '遅すぎる' },
@@ -85,12 +85,12 @@ export function FeedbackModal({ isOpen, onClose, place, evaluationType, onSubmit
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
             <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
                 {/* Header */}
-                <div className={`p-4 flex items-center justify-between ${evaluationType === 'good' ? 'bg-rose-50' : 'bg-slate-50'}`}>
-                    <h3 className={`text-lg font-bold ${evaluationType === 'good' ? 'text-rose-700' : 'text-slate-700'}`}>
+                <div className={`p-4 flex items-center justify-between ${evaluationType === 'good' ? 'bg-rose-50' : 'bg-brand-gray/20'}`}>
+                    <h3 className={`text-lg font-bold ${evaluationType === 'good' ? 'text-rose-700' : 'text-brand-black/80'}`}>
                         {evaluationType === 'good' ? '良かった点' : '気になった点は？'}
                     </h3>
                     <button onClick={onClose} className="p-1 hover:bg-black/10 rounded-full">
-                        <X size={20} className="text-slate-500" />
+                        <X size={20} className="text-brand-black/80" />
                     </button>
                 </div>
 
@@ -100,12 +100,12 @@ export function FeedbackModal({ isOpen, onClose, place, evaluationType, onSubmit
                     {/* Only Bad Evaluation Supported in Modal Now */}
                     {/* Directional Feedback */}
                     <div className="space-y-6">
-                        <p className="text-sm font-medium text-slate-700">
+                        <p className="text-sm font-medium text-brand-black/80">
                             期待と違った点を選択してください（具体的に）
                         </p>
                         {MASTER_FEATURES.map((group) => (
                             <div key={group.axis} className="space-y-3">
-                                <h4 className="text-xs font-bold uppercase tracking-wider border-b pb-1 text-slate-700 border-slate-200">
+                                <h4 className="text-xs font-bold uppercase tracking-wider border-b pb-1 text-brand-black/80 border-brand-gray">
                                     {group.label}
                                 </h4>
                                 <div className="grid gap-3">
@@ -113,13 +113,13 @@ export function FeedbackModal({ isOpen, onClose, place, evaluationType, onSubmit
                                         const currentVal = negativeFeedback[feature.key];
                                         return (
                                             <div key={feature.key} className="flex flex-col gap-2">
-                                                <div className="text-xs font-bold text-slate-500">{feature.label}</div>
+                                                <div className="text-xs font-bold text-brand-black/80">{feature.label}</div>
                                                 <div className="grid grid-cols-2 gap-2">
                                                     <button
                                                         onClick={() => toggleNegative(feature.key, 'too_low')}
                                                         className={`px-2 py-2 text-xs rounded border transition-colors ${currentVal === 'too_low'
-                                                            ? 'bg-slate-800 text-white border-slate-800'
-                                                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                                                            ? 'bg-brand-black text-white border-brand-black'
+                                                            : 'bg-white border-brand-gray text-brand-black/80 hover:bg-brand-gray/20'
                                                             }`}
                                                     >
                                                         {feature.low}
@@ -127,8 +127,8 @@ export function FeedbackModal({ isOpen, onClose, place, evaluationType, onSubmit
                                                     <button
                                                         onClick={() => toggleNegative(feature.key, 'too_high')}
                                                         className={`px-2 py-2 text-xs rounded border transition-colors ${currentVal === 'too_high'
-                                                            ? 'bg-slate-800 text-white border-slate-800'
-                                                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                                                            ? 'bg-brand-black text-white border-brand-black'
+                                                            : 'bg-white border-brand-gray text-brand-black/80 hover:bg-brand-gray/20'
                                                             }`}
                                                     >
                                                         {feature.high}
@@ -144,10 +144,10 @@ export function FeedbackModal({ isOpen, onClose, place, evaluationType, onSubmit
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+                <div className="p-4 border-t border-brand-gray bg-brand-gray/20 flex justify-end">
                     <button
                         onClick={handleSubmit}
-                        className={`flex items-center gap-2 px-6 py-2.5 rounded-full font-bold text-white shadow-md transition-transform active:scale-95 ${evaluationType === 'good' ? 'bg-rose-500 hover:bg-rose-600' : 'bg-slate-700 hover:bg-slate-800'
+                        className={`flex items-center gap-2 px-6 py-2.5 rounded-full font-bold text-white shadow-md transition-transform active:scale-95 ${evaluationType === 'good' ? 'bg-rose-500 hover:bg-rose-600' : 'bg-brand-black/80 hover:bg-brand-black'
                             }`}
                     >
                         <Check size={18} />

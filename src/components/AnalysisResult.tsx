@@ -5,11 +5,12 @@ import { getPlaceDetails } from '@/server/actions/place';
 import { getGoogleMapsApiKey } from '@/server/actions/config';
 import { useState, useEffect } from 'react';
 import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
-import { Loader2, Star, TrendingUp, DollarSign, Coffee, Smile, MapPin, Briefcase, Heart, User, Users, Award, RefreshCw, Map, Utensils, Wine, Accessibility, CreditCard, Check, X, Sparkles, ExternalLink } from 'lucide-react';
+import { Loader2, Star, TrendingUp, DollarSign, Coffee, Smile, MapPin, Briefcase, Heart, User, Users, Award, RefreshCw, Map, Utensils, Wine, Accessibility, CreditCard, Check, X, Sparkles, ExternalLink, CheckCircle, Scale } from 'lucide-react';
 import { PlaceBadges } from '@/components/PlaceBadges';
 import { HotPepperCredit } from '@/components/HotPepperCredit';
 import { ActionButtons } from '@/components/ActionButtons';
 import { useAuth } from '@/lib/firebase/auth';
+import { useComparison } from '@/contexts/ComparisonContext';
 
 interface AnalysisResultProps {
     place: Place;
@@ -31,15 +32,20 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
     const [apiKey, setApiKey] = useState('');
     const [isRetrying, setIsRetrying] = useState(false);
 
+    // Comparison
+    const { selectedPlaces, toggleSelection } = useComparison();
+    const isSelected = selectedPlaces.some(p => p.id === place.id);
+
     // Auth for Personalization
     const { user } = useAuth();
 
     useEffect(() => {
+        getPlaceDetails(place.id).catch(e => console.error(e));
         getGoogleMapsApiKey().then(key => {
             console.log('API Key fetched:', !!key);
             setApiKey(key);
         });
-    }, []);
+    }, [place.id]);
 
     const handleRetry = async () => {
         setIsRetrying(true);
@@ -56,8 +62,8 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
         return (
             <div className="flex flex-col items-center justify-center p-12 space-y-4 animate-pulse">
                 <Loader2 className="w-12 h-12 text-rose-500 animate-spin" />
-                <p className="text-xl text-slate-800 font-medium">AIが分析中...</p>
-                <p className="text-sm text-slate-500">口コミを分析しています</p>
+                <p className="text-xl text-brand-black font-medium">AIが分析中...</p>
+                <p className="text-sm text-brand-black/80">口コミを分析しています</p>
             </div>
         );
     }
@@ -140,39 +146,75 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
         <div className="w-full max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
             {/* Header Section: Name & Badges */}
-            <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-8 md:p-10">
+            <div className="bg-white rounded-3xl shadow-xl border border-brand-gray p-8 md:p-10">
                 <div className="flex flex-col gap-4">
                     {/* Name & Image Row */}
 
                     {/* Name & Image Row */}
+                    {/* Name & Image Row */}
                     <div className="flex flex-col md:flex-row md:items-center gap-6">
-                        {place.hotpepper?.imageUrl && (
-                            <div className="w-24 h-24 md:w-32 md:h-32 rounded-xl overflow-hidden shadow-sm border border-slate-100 shrink-0">
+                        {place.hotpepper?.imageUrl ? (
+                            <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-xl overflow-hidden shadow-sm border border-brand-gray shrink-0 group">
                                 <img
                                     src={place.hotpepper.imageUrl}
                                     alt={place.name}
                                     className="w-full h-full object-cover"
                                 />
+                                {isSelected && (
+                                    <div className="absolute top-2 left-2 bg-brand text-white rounded-full p-1 shadow-md z-10">
+                                        <CheckCircle className="w-4 h-4 fill-white text-brand" />
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-xl overflow-hidden shadow-sm border border-brand-gray shrink-0 bg-brand-gray/10 flex flex-col items-center justify-center text-brand-black/50 group">
+                                <span className="text-xs font-bold">No Image</span>
+                                {isSelected && (
+                                    <div className="absolute top-2 left-2 bg-brand text-white rounded-full p-1 shadow-md z-10">
+                                        <CheckCircle className="w-4 h-4 fill-white text-brand" />
+                                    </div>
+                                )}
                             </div>
                         )}
-                        <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+                        <h2 className="text-3xl md:text-4xl font-extrabold text-brand-black tracking-tight leading-tight">
                             {place.name}
                         </h2>
                     </div>
 
                     {/* Action Bar (Personalization) */}
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mt-2">
                         <PlaceBadges place={place} />
-                        <div className="ml-auto">
+                        <div className="ml-auto flex items-center gap-3">
+                            {/* Compare Toggle Button */}
+                            <button
+                                onClick={() => toggleSelection(place)}
+                                className={`relative rounded-full text-sm font-bold transition-all duration-300 shadow-sm hover:shadow-md active:scale-95 group ${isSelected
+                                    ? 'bg-brand text-white px-4 py-2 border border-brand'
+                                    : 'p-[2px] bg-gradient-to-r from-orange-400 via-rose-300 to-orange-400 hover:from-orange-500 hover:via-rose-400 hover:to-orange-500'
+                                    }`}
+                            >
+                                {isSelected ? (
+                                    <div className="flex items-center gap-1.5">
+                                        <Scale className="w-4 h-4" />
+                                        <span>選択済み</span>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white rounded-full transition-colors w-full h-full">
+                                        <Scale className="w-4 h-4 text-orange-500" />
+                                        <span className="bg-gradient-to-r from-orange-600 to-rose-600 bg-clip-text text-transparent">トレイに追加</span>
+                                    </div>
+                                )}
+                            </button>
+
                             <ActionButtons place={place} uid={user?.uid} />
                         </div>
                     </div>
 
                     {/* Contact Info (Address, Access, Map Link) */}
-                    <div className="flex flex-col gap-2 text-sm text-slate-600 mt-2">
+                    <div className="flex flex-col gap-2 text-sm text-brand-black/80 mt-2">
                         {place.address && (
                             <div className="flex items-center gap-2">
-                                <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
+                                <MapPin className="w-4 h-4 text-brand-black/50 shrink-0" />
                                 <span>{place.address}</span>
                             </div>
                         )}
@@ -181,13 +223,13 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
                         {/* Nearest Station Info (Prioritized) */}
                         {(place.nearestStation || place.hotpepper?.access) && (
                             <div className="flex items-center gap-2">
-                                <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
+                                <MapPin className="w-4 h-4 text-brand-black/50 shrink-0" />
                                 <span>{place.nearestStation || place.hotpepper?.access}</span>
                             </div>
                         )}
 
                         <div className="flex items-center gap-2">
-                            <Map className="w-4 h-4 text-slate-400 shrink-0" />
+                            <Map className="w-4 h-4 text-brand-black/50 shrink-0" />
                             <a
                                 href={`https://www.google.com/maps/search/?api=1&query=Google&query_place_id=${place.id}`}
                                 target="_blank"
@@ -227,7 +269,7 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
                     </div>
 
                     {/* Last Updated */}
-                    <div className="flex items-center gap-2 text-slate-400 text-xs mt-2">
+                    <div className="flex items-center gap-2 text-brand-black/50 text-xs mt-2">
                         <RefreshCw className="w-3 h-3" />
                         <span className="tabular-nums">最終更新: {formatDate(place.updatedAt)}</span>
                     </div>
@@ -239,32 +281,32 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
                 <button
                     onClick={() => setActiveTab('evaluation')}
                     className={`px-6 py-3 text-sm font-medium transition-colors relative ${activeTab === 'evaluation'
-                        ? 'text-orange-600'
+                        ? 'text-brand'
                         : 'text-gray-500 hover:text-gray-700'
                         }`}
                 >
                     評価
                     {activeTab === 'evaluation' && (
-                        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-orange-600" />
+                        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-brand" />
                     )}
                 </button>
                 <button
                     onClick={() => setActiveTab('map')}
                     className={`px-6 py-3 text-sm font-medium transition-colors relative ${activeTab === 'map'
-                        ? 'text-orange-600'
+                        ? 'text-brand'
                         : 'text-gray-500 hover:text-gray-700'
                         }`}
                 >
                     地図
                     {activeTab === 'map' && (
-                        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-orange-600" />
+                        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-brand" />
                     )}
                 </button>
             </div>
 
             {/* Map Tab Content */}
             {activeTab === 'map' && (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 h-[500px] w-full">
+                <div className="bg-white rounded-xl shadow-sm border border-brand-gray p-4 h-[500px] w-full">
                     {apiKey ? (
                         <iframe
                             width="100%"
@@ -286,111 +328,39 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
             {/* Evaluation Tab Content */}
             {activeTab === 'evaluation' && (
                 <>
-                    {/* Axis & Scenario Selection Control */}
-                    <div className="mb-8 p-6 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center gap-6">
-                        <div className="text-center">
-                            <p className="text-sm font-bold text-slate-500 mb-2">
-                                重視するポイント（複数選択可）
-                            </p>
-                            <div className="flex flex-wrap gap-3 justify-center">
-                                {[
-                                    { id: 'taste', label: '味・料理', icon: Utensils },
-                                    { id: 'service', label: '接客・サービス', icon: Heart },
-                                    { id: 'atmosphere', label: '雰囲気・空間', icon: Sparkles },
-                                    { id: 'cost', label: 'コスパ', icon: TrendingUp },
-                                ].map((axis) => {
-                                    const isSelected = focusedAxes.includes(axis.id);
-                                    return (
-                                        <button
-                                            key={axis.id}
-                                            onClick={() => onToggleAxis && onToggleAxis(axis.id)}
-                                            disabled={!onToggleAxis}
-                                            className={`
-                                       flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all duration-300 border shadow-sm
-                                       ${isSelected
-                                                    ? 'bg-[#E65100] text-white border-[#E65100] transform scale-105 shadow-md'
-                                                    : 'bg-white text-slate-600 border-slate-200 hover:border-[#E65100] hover:text-[#E65100]'
-                                                }
-                                     `}
-                                        >
-                                            <axis.icon className="w-4 h-4" />
-                                            {axis.label}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        <div className="w-full border-t border-slate-200"></div>
-
-                        <div className="text-center">
-                            <p className="text-sm font-bold text-slate-500 mb-2">
-                                利用シーン（複数選択可）
-                            </p>
-                            <div className="flex flex-wrap gap-3 justify-center">
-                                {[
-                                    { id: 'business', label: 'ビジネス', icon: Briefcase },
-                                    { id: 'date', label: 'デート', icon: Heart },
-                                    { id: 'solo', label: 'お一人様', icon: User },
-                                    { id: 'family', label: 'ファミリー', icon: Users },
-                                    { id: 'group', label: '団体', icon: Users },
-                                ].map((scene) => {
-                                    const isSelected = focusedScenes.includes(scene.id);
-                                    return (
-                                        <button
-                                            key={scene.id}
-                                            onClick={() => onToggleScene && onToggleScene(scene.id)}
-                                            disabled={!onToggleScene}
-                                            className={`
-                                       flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all duration-300 border shadow-sm
-                                       ${isSelected
-                                                    ? 'bg-rose-600 text-white border-rose-600 transform scale-105 shadow-md'
-                                                    : 'bg-white text-slate-600 border-slate-200 hover:border-rose-600 hover:text-rose-600'
-                                                }
-                                     `}
-                                        >
-                                            <scene.icon className="w-4 h-4" />
-                                            {scene.label}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
-
                     {/* Score Display (True Score vs Google Score) */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* True Score (Left - Prominent) */}
                         {yourScore ? (
-                            <div className="bg-white p-6 rounded-xl shadow-lg border border-[#E65100] flex flex-col items-center justify-center relative overflow-hidden animate-in fade-in zoom-in-95 duration-300">
-                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E65100] to-orange-500"></div>
-                                <h3 className="text-[#E65100] font-bold mb-2">あなたへのマッチ度</h3>
+                            <div className="bg-white p-6 rounded-xl shadow-lg border border-brand flex flex-col items-center justify-center relative overflow-hidden animate-in fade-in zoom-in-95 duration-300">
+                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand to-brand/80"></div>
+                                <h3 className="text-brand font-bold mb-2">あなたとのマッチ度</h3>
                                 <div className="flex items-baseline">
-                                    <span className="text-6xl font-bold text-[#E65100] tabular-nums">{yourScore.toFixed(1)}</span>
-                                    <span className="text-2xl text-orange-300 ml-1">/5.0</span>
+                                    <span className="text-6xl font-bold text-brand tabular-nums">{yourScore.toFixed(1)}</span>
+                                    <span className="text-2xl text-brand ml-1">/5.0</span>
                                 </div>
-                                <div className="flex items-center mt-2 text-orange-500">
+                                <div className="flex items-center mt-2 text-brand">
                                     {[...Array(5)].map((_, i) => (
                                         <Star
                                             key={i}
-                                            className={`w-6 h-6 ${i < Math.round(yourScore) ? 'fill-current' : 'text-orange-200'}`}
+                                            className={`w-6 h-6 ${i < Math.round(yourScore) ? 'fill-current' : 'text-brand'}`}
                                         />
                                     ))}
                                 </div>
                                 <div className="mt-4 flex flex-col items-center gap-1">
-                                    <p className="text-xs font-bold text-slate-400">AI分析スコア</p>
-                                    <span className="text-xl font-bold text-slate-500">{place.trueScore?.toFixed(1)}</span>
+                                    <p className="text-xs font-bold text-brand-black/50">AI分析スコア</p>
+                                    <span className="text-xl font-bold text-brand-black/80">{place.trueScore?.toFixed(1)}</span>
                                 </div>
                             </div>
                         ) : (
-                            <div className="bg-white p-6 rounded-xl shadow-sm border border-orange-100 flex flex-col items-center justify-center relative overflow-hidden">
-                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-400 to-red-500"></div>
+                            <div className="bg-white p-6 rounded-xl shadow-sm border border-brand flex flex-col items-center justify-center relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand to-red-500"></div>
                                 <h3 className="text-gray-500 font-medium mb-2">AI分析スコア</h3>
                                 <div className="flex items-baseline">
                                     <span className="text-6xl font-bold text-gray-900 tabular-nums">{place.trueScore?.toFixed(1)}</span>
                                     <span className="text-2xl text-gray-400 ml-1">/5.0</span>
                                 </div>
-                                <div className="flex items-center mt-2 text-orange-500">
+                                <div className="flex items-center mt-2 text-brand">
                                     {[...Array(5)].map((_, i) => (
                                         <Star
                                             key={i}
@@ -428,8 +398,8 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
                     {/* 1. Charts & Metrics */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Radar Chart */}
-                        <div className="lg:col-span-1 bg-white rounded-3xl shadow-lg border border-slate-100 p-8 h-96">
-                            <h3 className="text-lg font-bold text-slate-900 mb-6">バランス分析</h3>
+                        <div className="lg:col-span-1 bg-white rounded-3xl shadow-lg border border-brand-gray p-8 h-96">
+                            <h3 className="text-lg font-bold text-brand-black mb-6">バランス分析</h3>
                             <ResponsiveContainer width="100%" height="100%">
                                 <RadarChart cx="50%" cy="45%" outerRadius="70%" data={data}>
                                     <PolarGrid stroke="#e2e8f0" />
@@ -449,18 +419,18 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
 
                         {/* Metric Cards */}
                         <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <MetricCard icon={Coffee} label="味・品質" value={place.axisScores?.taste} />
-                            <MetricCard icon={Smile} label="接客・サービス" value={place.axisScores?.service} />
-                            <MetricCard icon={TrendingUp} label="雰囲気" value={place.axisScores?.atmosphere} />
-                            <MetricCard icon={DollarSign} label="コストパフォーマンス" value={place.axisScores?.cost} />
+                            <MetricCard icon={Utensils} label="味" value={place.axisScores?.taste} />
+                            <MetricCard icon={Heart} label="接客" value={place.axisScores?.service} />
+                            <MetricCard icon={Sparkles} label="雰囲気" value={place.axisScores?.atmosphere} />
+                            <MetricCard icon={TrendingUp} label="コストパフォーマンス" value={place.axisScores?.cost} />
                         </div>
                     </div>
 
                     {/* 2. Summary & Gap Reason */}
                     <div className="space-y-6">
-                        <div className="bg-white rounded-3xl shadow-lg border border-slate-100 p-8">
-                            <h3 className="text-xl font-bold text-slate-900 mb-4">AI分析サマリー</h3>
-                            <p className="text-lg text-slate-600 leading-relaxed">{place.summary}</p>
+                        <div className="bg-white rounded-3xl shadow-lg border border-brand-gray p-8">
+                            <h3 className="text-xl font-bold text-brand-black mb-4">AI分析サマリー</h3>
+                            <p className="text-lg text-brand-black/80 leading-relaxed">{place.summary}</p>
 
                             {place.gapReason && (
                                 <div className="mt-6 bg-amber-50 border border-amber-200 rounded-2xl p-6">
@@ -479,29 +449,29 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
                     {/* 3. Detailed Analysis Matrix */}
                     {place.axisAnalysis && (
                         <div className="space-y-6">
-                            <h3 className="text-2xl font-bold text-slate-900">評価軸別 詳細分析</h3>
+                            <h3 className="text-2xl font-bold text-brand-black">評価軸別 詳細分析</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <AxisAnalysisCard
-                                    title="味・品質"
-                                    icon={Coffee}
+                                    title="味"
+                                    icon={Utensils}
                                     data={place.axisAnalysis.taste}
                                     color="rose"
                                 />
                                 <AxisAnalysisCard
-                                    title="接客・サービス"
-                                    icon={Smile}
+                                    title="接客"
+                                    icon={Heart}
                                     data={place.axisAnalysis.service}
                                     color="blue"
                                 />
                                 <AxisAnalysisCard
                                     title="雰囲気"
-                                    icon={TrendingUp}
+                                    icon={Sparkles}
                                     data={place.axisAnalysis.atmosphere}
                                     color="purple"
                                 />
                                 <AxisAnalysisCard
                                     title="コストパフォーマンス"
-                                    icon={DollarSign}
+                                    icon={TrendingUp}
                                     data={place.axisAnalysis.cost}
                                     color="emerald"
                                 />
@@ -510,8 +480,8 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
                     )}
 
                     {/* Usage Scores */}
-                    <div className="bg-white rounded-3xl shadow-lg border border-slate-100 p-8 md:p-10">
-                        <h3 className="text-xl font-bold text-slate-900 mb-8">どんなシーンにおすすめ？</h3>
+                    <div className="bg-white rounded-3xl shadow-lg border border-brand-gray p-8 md:p-10">
+                        <h3 className="text-xl font-bold text-brand-black mb-8">どんなシーンにおすすめ？</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
                             <UsageCard label="ビジネス" subLabel="接待・会食" value={place.usageScores?.business} />
                             <UsageCard label="デート" subLabel="記念日・カップル" value={place.usageScores?.date} />
@@ -520,8 +490,8 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
                             <UsageCard label="団体利用" subLabel="宴会・飲み会" value={place.usageScores?.group} />
                         </div>
                         {place.usageSummary && (
-                            <div className="mt-6 bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm text-slate-600 leading-relaxed">
-                                <span className="font-bold text-slate-700 mr-2">💡 シーン分析:</span>
+                            <div className="mt-6 bg-brand-gray/20 border border-brand-gray rounded-2xl p-4 text-sm text-brand-black/80 leading-relaxed">
+                                <span className="font-bold text-brand-black/80 mr-2">💡 シーン分析:</span>
                                 {place.usageSummary}
                             </div>
                         )}
@@ -549,8 +519,8 @@ function BasicInfoSection({ place }: { place: Place }) {
     const { paymentOptions, serviceOptions, offerings, amenities, diningOptions } = detailedInfo;
 
     return (
-        <div className="bg-white rounded-3xl shadow-lg border border-slate-100 p-8 md:p-10">
-            <h3 className="text-xl font-bold text-slate-900 mb-8">基本情報</h3>
+        <div className="bg-white rounded-3xl shadow-lg border border-brand-gray p-8 md:p-10">
+            <h3 className="text-xl font-bold text-brand-black mb-8">基本情報</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
                 {/* Service Options */}
@@ -583,13 +553,13 @@ function BasicInfoSection({ place }: { place: Place }) {
                     {paymentOptions && paymentOptions.length > 0 ? (
                         <div className="flex flex-wrap gap-2">
                             {paymentOptions.map((p, i) => (
-                                <span key={i} className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-md border border-slate-200">
+                                <span key={i} className="px-2 py-1 brand-gray text-brand-black/80 text-xs rounded-md border border-brand-gray">
                                     {formatPaymentOption(p)}
                                 </span>
                             ))}
                         </div>
                     ) : (
-                        <span className="text-sm text-slate-400">情報なし</span>
+                        <span className="text-sm text-brand-black/50">情報なし</span>
                     )}
                 </InfoGroup>
             </div>
@@ -600,8 +570,8 @@ function BasicInfoSection({ place }: { place: Place }) {
 function InfoGroup({ title, icon: Icon, children }: any) {
     return (
         <div className="space-y-4">
-            <div className="flex items-center gap-2 text-slate-800 font-bold border-b border-slate-100 pb-2">
-                <Icon className="w-5 h-5 text-slate-400" />
+            <div className="flex items-center gap-2 text-brand-black font-bold border-b border-brand-gray pb-2">
+                <Icon className="w-5 h-5 text-brand-black/50" />
                 <h4>{title}</h4>
             </div>
             <div className="space-y-2 pl-2">
@@ -618,9 +588,9 @@ function InfoItem({ label, value }: { label: string, value?: boolean }) {
             {value ? (
                 <Check className="w-4 h-4 text-emerald-500 shrink-0" />
             ) : (
-                <X className="w-4 h-4 text-slate-300 shrink-0" />
+                <X className="w-4 h-4 text-brand-black/50 shrink-0" />
             )}
-            <span className={value ? 'text-slate-700 font-medium' : 'text-slate-400'}>{label}</span>
+            <span className={value ? 'text-brand-black/80 font-medium' : 'text-brand-black/50'}>{label}</span>
         </div>
     );
 }
@@ -635,19 +605,19 @@ function UsageCard({ label, subLabel, value }: any) {
     const isHigh = score >= 4.0;
 
     return (
-        <div className={`group p-6 rounded-2xl border-2 transition-all duration-300 hover:shadow-lg ${isHigh ? 'bg-white border-rose-100 hover:border-rose-200' : 'bg-slate-50 border-transparent'}`}>
+        <div className={`group p-6 rounded-2xl border-2 transition-all duration-300 hover:shadow-lg ${isHigh ? 'bg-white border-rose-100 hover:border-rose-200' : 'bg-brand-gray/20 border-transparent'}`}>
             <div className="flex justify-between items-start mb-4">
                 <div>
-                    <div className="text-slate-900 font-bold text-lg">{label}</div>
-                    <div className="text-xs text-slate-500 mt-1">{subLabel}</div>
+                    <div className="text-brand-black font-bold text-lg">{label}</div>
+                    <div className="text-xs text-brand-black/80 mt-1">{subLabel}</div>
                 </div>
-                <div className={`text-2xl font-black ${isHigh ? 'text-rose-500' : 'text-slate-300'}`}>
+                <div className={`text-2xl font-black ${isHigh ? 'text-rose-500' : 'text-brand-black/50'}`}>
                     {score.toFixed(1)}
                 </div>
             </div>
-            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+            <div className="h-2 brand-gray rounded-full overflow-hidden">
                 <div
-                    className={`h-full rounded-full transition-all duration-1000 ${isHigh ? 'bg-rose-500' : 'bg-slate-300'}`}
+                    className={`h-full rounded-full transition-all duration-1000 ${isHigh ? 'bg-rose-500' : 'bg-brand-black/50'}`}
                     style={{ width: `${(score / 5) * 100}%` }}
                 ></div>
             </div>
@@ -657,18 +627,18 @@ function UsageCard({ label, subLabel, value }: any) {
 
 function MetricCard({ icon: Icon, label, value }: any) {
     return (
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow flex items-start gap-4">
-            <div className="p-3 rounded-xl bg-slate-50 text-slate-700">
+        <div className="bg-white p-6 rounded-2xl border border-brand-gray shadow-sm hover:shadow-md transition-shadow flex items-start gap-4">
+            <div className="p-3 rounded-xl bg-brand-gray/20 text-brand-black/80">
                 <Icon className="w-6 h-6" />
             </div>
             <div className="flex-1">
                 <div className="flex justify-between items-center mb-1">
-                    <h4 className="font-bold text-slate-900">{label}</h4>
-                    <span className="text-2xl font-black text-slate-900">{value?.toFixed(1)}</span>
+                    <h4 className="font-bold text-brand-black">{label}</h4>
+                    <span className="text-2xl font-black text-brand-black">{value?.toFixed(1)}</span>
                 </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-2 brand-gray rounded-full overflow-hidden">
                     <div
-                        className="h-full bg-slate-900 rounded-full transition-all duration-1000"
+                        className="h-full bg-brand-black rounded-full transition-all duration-1000"
                         style={{ width: `${(value / 5) * 100}%` }}
                     ></div>
                 </div>
@@ -695,18 +665,18 @@ function AxisAnalysisCard({ title, icon: Icon, data, color }: any) {
                 <h4 className={`font-bold text-lg ${c.text}`}>{title}</h4>
             </div>
 
-            <p className="text-sm text-slate-700 font-medium mb-4 leading-relaxed bg-white/50 p-3 rounded-xl">
+            <p className="text-sm text-brand-black/80 font-medium mb-4 leading-relaxed bg-white/50 p-3 rounded-xl">
                 {data?.summary}
             </p>
 
             <div className="space-y-4">
                 <div>
-                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                    <div className="text-xs font-bold text-brand-black/80 uppercase tracking-wider mb-2 flex items-center gap-1">
                         <Smile className="w-3 h-3" /> 評価ポイント
                     </div>
                     <ul className="space-y-2">
                         {data?.pros?.map((p: string, i: number) => (
-                            <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                            <li key={i} className="flex items-start gap-2 text-sm text-brand-black/80">
                                 <span className={`mt-1.5 w-1.5 h-1.5 rounded-full ${c.dot} shrink-0`} />
                                 {p}
                             </li>
@@ -714,13 +684,13 @@ function AxisAnalysisCard({ title, icon: Icon, data, color }: any) {
                     </ul>
                 </div>
                 <div>
-                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                    <div className="text-xs font-bold text-brand-black/80 uppercase tracking-wider mb-2 flex items-center gap-1">
                         <TrendingUp className="w-3 h-3 rotate-180" /> 懸念ポイント
                     </div>
                     <ul className="space-y-2">
                         {data?.cons?.map((c: string, i: number) => (
-                            <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
-                                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
+                            <li key={i} className="flex items-start gap-2 text-sm text-brand-black/80">
+                                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-brand-black/50 shrink-0" />
                                 {c}
                             </li>
                         ))}

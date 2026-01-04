@@ -106,7 +106,7 @@ export function ActionButtons({ place, uid, onActionComplete }: ActionButtonsPro
         <div className="relative">
             {/* Toast Message */}
             {showToast && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 whitespace-nowrap px-4 py-2 bg-slate-800 text-white text-xs font-bold rounded-full shadow-lg animate-in fade-in slide-in-from-bottom-2 z-50">
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 whitespace-nowrap px-4 py-2 bg-brand-black text-white text-xs font-bold rounded-full shadow-lg animate-in fade-in slide-in-from-bottom-2 z-50">
                     あなたの好みを学習しました！
                 </div>
             )}
@@ -116,8 +116,8 @@ export function ActionButtons({ place, uid, onActionComplete }: ActionButtonsPro
                 <button
                     onClick={handleSaveClick}
                     className={`p-2 rounded-full border shadow-sm transition-all active:scale-95 ${isSaved
-                        ? 'bg-amber-50 border-amber-200 text-amber-500 fill-amber-500' // Filled
-                        : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                        ? 'hover:bg-orange-100 border-orange-100 text-orange-400' // Filled
+                        : 'bg-white border-brand-gray text-brand-black/80 hover:bg-orange-100 hover:text-orange-400'
                         }`}
                     title="保存（マイリスト）"
                 >
@@ -125,29 +125,29 @@ export function ActionButtons({ place, uid, onActionComplete }: ActionButtonsPro
                 </button>
 
                 {/* Evaluation Buttons Group */}
-                <div className="flex items-center rounded-full border border-slate-200 bg-white shadow-sm p-1">
+                <div className="flex items-center rounded-full border border-brand-gray bg-white shadow-sm p-1">
                     {/* Good */}
                     <button
                         onClick={() => handleEvaluationClick('good')}
                         disabled={isLoading}
                         className={`p-2 rounded-full transition-colors flex items-center justify-center ${lastEvaluation === 'good'
-                            ? 'bg-rose-100 text-rose-600'
-                            : 'text-slate-500 hover:bg-rose-50 hover:text-rose-500'
+                            ? 'hover:bg-orange-100 border-orange-100 text-orange-400'
+                            : 'bg-white text-brand-black/80 hover:bg-orange-100 hover:text-orange-400'
                             }`}
                         title="Good / 好み"
                     >
                         <ThumbsUp size={20} className={lastEvaluation === 'good' ? "fill-current" : ""} />
                     </button>
 
-                    <div className="w-px h-6 bg-slate-200 mx-1" />
+                    <div className="w-px h-6 bg-brand-gray mx-1" />
 
                     {/* Bad */}
                     <button
                         onClick={() => handleEvaluationClick('bad')}
                         disabled={isLoading}
                         className={`p-2 rounded-full transition-colors flex items-center justify-center ${lastEvaluation === 'bad'
-                            ? 'bg-slate-200 text-slate-700'
-                            : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+                            ? 'hover:bg-brand-gray text-brand-black'
+                            : 'text-brand-black/80 hover:bg-brand-gray hover:text-brand-black'
                             }`}
                         title="Bad / 合わない"
                     >

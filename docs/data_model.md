@@ -30,8 +30,8 @@ AI分析が完了すると、以下のフィールドが追加・更新されま
 | `summary` | `string` | 全体的な要約コメント。 |
 | `gapReason` | `string` | GoogleスコアとAI分析スコアの乖離理由。 |
 | `axisScores` | `Map` | 4軸評価スコア。 |
-| &nbsp;&nbsp;`taste` | `number` | 味・品質。 |
-| &nbsp;&nbsp;`service` | `number` | 接客・サービス。 |
+| &nbsp;&nbsp;`taste` | `number` | 味。 |
+| &nbsp;&nbsp;`service` | `number` | 接客。 |
 | &nbsp;&nbsp;`atmosphere` | `number` | 雰囲気。 |
 | &nbsp;&nbsp;`cost` | `number` | コストパフォーマンス。 |
 | `usageScores` | `Map` | 利用シーン別スコア。 |

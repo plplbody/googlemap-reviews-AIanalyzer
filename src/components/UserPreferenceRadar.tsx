@@ -15,7 +15,7 @@ interface UserPreferenceRadarProps {
 export function UserPreferenceRadar({ preferences, compact = false }: UserPreferenceRadarProps) {
     if (!preferences) {
         return (
-            <div className={`flex flex-col items-center justify-center text-slate-400 bg-slate-50 rounded-2xl ${compact ? 'h-32' : 'h-64'}`}>
+            <div className={`flex flex-col items-center justify-center text-brand-black/50 bg-brand-gray/20 rounded-2xl ${compact ? 'h-32' : 'h-64'}`}>
                 <p className="text-sm font-bold">データ不足</p>
                 <p className="text-xs">まだ学習データがありません</p>
             </div>
@@ -40,7 +40,7 @@ export function UserPreferenceRadar({ preferences, compact = false }: UserPrefer
     ];
 
     return (
-        <div className={`relative ${compact ? 'h-32' : 'h-48'} w-full`}>
+        <div className={`relative ${compact ? 'h-32' : 'h-48'} w-full flex flex-col items-center`}>
             <ResponsiveContainer width="100%" height="100%">
                 <RadarChart cx="50%" cy="50%" outerRadius={compact ? "65%" : "70%"} data={data}>
                     <PolarGrid stroke="#e2e8f0" />

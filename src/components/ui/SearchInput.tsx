@@ -77,33 +77,33 @@ export default function SearchInput({ onSearchStart, onSearchComplete }: SearchI
                     onClick={() => setActiveField(null)}
                 />
             )}
-            <form onSubmit={handleSearch} className="relative z-10 flex items-center bg-white/80 backdrop-blur-md border border-white/20 rounded-full shadow-lg hover:shadow-orange-500/20 transition-all duration-300 overflow-visible p-2 h-20 w-full group">
+            <form onSubmit={handleSearch} className="relative z-10 flex items-center bg-white/80 backdrop-blur-md border border-white/20 rounded-full shadow-lg hover:shadowbrand/20 transition-all duration-300 overflow-visible p-2 h-20 w-full group">
 
                 {/* キーワード入力欄 */}
-                <div className="flex-[1.2] flex flex-col justify-center px-4 border-r border-slate-200/50 hover:bg-white/50 transition-colors h-full">
-                    <label htmlFor="keyword" className="text-xs font-bold text-slate-500 mb-0.5 uppercase tracking-wider">Keyword</label>
+                <div className="flex-[1.2] flex flex-col justify-center px-4 border-r border-brand-gray hover:bg-white/50 transition-colors h-full">
+                    <label htmlFor="keyword" className="text-xs font-bold text-brand-black/80 mb-0.5 uppercase tracking-wider">Keyword</label>
                     <input
                         id="keyword"
                         type="text"
                         value={keyword}
                         onChange={(e) => setKeyword(e.target.value)}
                         placeholder="店名・ジャンル・キーワード"
-                        className="w-full bg-transparent border-none focus:ring-0 focus:outline-none p-0 text-slate-900 font-bold placeholder:text-slate-400 text-base truncate caret-slate-400"
+                        className="w-full bg-transparent border-none focus:ring-0 focus:outline-none p-0 text-brand-black font-bold placeholder:text-brand-black/50 text-base truncate caret-brand-black/50"
                         style={{ transition: 'background-color 5000s ease-in-out 0s' }}
                         onFocus={() => setActiveField('keyword')}
                     />
                 </div>
 
                 {/* エリア入力欄 */}
-                <div className="flex-1 flex flex-col justify-center px-4 hover:bg-white/50 transition-colors h-full border-l border-slate-200/50">
-                    <label htmlFor="area" className="text-xs font-bold text-slate-500 mb-0.5 uppercase tracking-wider">Area</label>
+                <div className="flex-1 flex flex-col justify-center px-4 hover:bg-white/50 transition-colors h-full border-l border-brand-gray">
+                    <label htmlFor="area" className="text-xs font-bold text-brand-black/80 mb-0.5 uppercase tracking-wider">Area</label>
                     <input
                         id="area"
                         type="text"
                         value={area}
                         onChange={(e) => setArea(e.target.value)}
                         placeholder="エリア・駅名"
-                        className="w-full bg-transparent border-none focus:ring-0 focus:outline-none p-0 text-slate-900 font-bold placeholder:text-slate-400 text-base truncate caret-slate-400"
+                        className="w-full bg-transparent border-none focus:ring-0 focus:outline-none p-0 text-brand-black font-bold placeholder:text-brand-black/50 text-base truncate caret-brand-black/50"
                         style={{ transition: 'background-color 5000s ease-in-out 0s' }}
                         onFocus={() => setActiveField('area')}
                     />
@@ -113,7 +113,7 @@ export default function SearchInput({ onSearchStart, onSearchComplete }: SearchI
                 <button
                     type="submit"
                     disabled={loading}
-                    className="ml-2 bg-[#E65100] hover:bg-[#F57C00] text-white p-4 rounded-full transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-orange-500/50 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 aspect-square h-14 w-14"
+                    className="ml-2 bg-brand hover:bg-[#F57C00] text-white p-4 rounded-full transition-all duration-300 flex items-center justify-center shadow-lg hover:shadowbrand/50 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 aspect-square h-14 w-14"
                 >
                     {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Search className="w-6 h-6 font-bold" />}
                 </button>
@@ -122,7 +122,7 @@ export default function SearchInput({ onSearchStart, onSearchComplete }: SearchI
             {/* Suggestion Panel */}
             {activeField && (
                 <div className="absolute top-24 left-0 w-full bg-white/90 backdrop-blur-md border border-white/40 rounded-3xl shadow-xl p-6 z-20 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="flex items-center gap-2 mb-3 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <div className="flex items-center gap-2 mb-3 text-xs font-bold text-brand-black/80 uppercase tracking-wider">
                         {activeField === 'keyword' ? <Search className="w-3 h-3" /> : <MapPin className="w-3 h-3" />}
                         {activeField === 'keyword' ? '人気のキーワード' : 'よく検索されるエリア・駅'}
                     </div>
@@ -132,7 +132,7 @@ export default function SearchInput({ onSearchStart, onSearchComplete }: SearchI
                                 key={item.label}
                                 type="button"
                                 onClick={() => handleSuggestionClick(item.value, activeField)}
-                                className="px-4 py-2 bg-white hover:bg-[#E65100] hover:text-white text-slate-600 rounded-full border border-slate-200 text-sm font-bold transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105 active:scale-95"
+                                className="px-4 py-2 bg-white hover:bg-brand hover:text-white text-brand-black/80 rounded-full border border-brand-gray text-sm font-bold transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105 active:scale-95"
                             >
                                 {item.label}
                             </button>

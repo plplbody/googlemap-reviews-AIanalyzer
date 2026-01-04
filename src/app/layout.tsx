@@ -15,6 +15,8 @@ export const metadata: Metadata = {
 
 import { AuthProvider } from "@/contexts/AuthContext";
 import { SearchProvider } from "@/contexts/SearchContext";
+import { ComparisonProvider } from "@/contexts/ComparisonContext";
+
 
 // アプリケーション全体のルートレイアウト
 export default function RootLayout({
@@ -27,7 +29,9 @@ export default function RootLayout({
             <body className={`${shipporiMincho.className} antialiased`}>
                 <AuthProvider>
                     <SearchProvider>
-                        {children}
+                        <ComparisonProvider>
+                            {children}
+                        </ComparisonProvider>
                     </SearchProvider>
                 </AuthProvider>
             </body>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, Suspense, useRef, useCallback } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { doc, onSnapshot } from "firebase/firestore";
 import { firestore } from "@/lib/firebase/client";
@@ -10,6 +9,7 @@ import AnalysisResult from "@/components/AnalysisResult";
 
 import Header from "@/components/Header";
 import PlaceList from '@/components/PlaceList';
+import { ComparisonTray } from '@/components/ComparisonTray';
 import { SelectionButton } from '@/components/ui/SelectionButton';
 import { Place } from "@/types/schema";
 import {
@@ -423,7 +423,7 @@ function HomeContent() {
 
 
   return (
-    <main className="min-h-screen bg-[#FAFAFA] text-[#1A1A1A] font-serif selection:bg-[#E65100]/20">
+    <main className="min-h-screen bg-[#FAFAFA] text-[#1A1A1A] font-serif selection:bg-brand/20">
       <Header viewState={viewState} onResetHome={resetHome} />
 
       {/* ヒーローセクション（ホーム画面でのみ表示） */}
@@ -444,7 +444,7 @@ function HomeContent() {
               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-1000">
                 <h1 className="text-3xl md:text-6xl font-bold text-white tracking-tight text-shadow-lg leading-tight">
                   あなた専属の、<br />
-                  <span className="text-[#E65100]">AIグルメコンシェルジュ</span>
+                  <span className="text-brand">AIグルメコンシェルジュ</span>
                 </h1>
                 <p className="text-gray-200 text-lg md:text-xl font-sans font-light tracking-wide max-w-2xl mx-auto leading-relaxed">
                   口コミをAIが分析し、客観的に評価。<br className="hidden md:block" />
@@ -466,8 +466,8 @@ function HomeContent() {
             <div className="container mx-auto px-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
                 <div className="flex flex-col items-center gap-4 group">
-                  <div className="w-16 h-16 rounded-full bg-[#FAFAFA] flex items-center justify-center group-hover:bg-[#E65100]/10 transition-colors">
-                    <Sparkles className="w-8 h-8 text-[#E65100]" />
+                  <div className="w-16 h-16 rounded-full bg-[#FAFAFA] flex items-center justify-center group-hover:bg-brand/10 transition-colors">
+                    <Sparkles className="w-8 h-8 text-brand" />
                   </div>
                   <h3 className="text-xl font-bold">客観的なAI評価</h3>
                   <p className="text-gray-500 font-sans text-sm leading-relaxed">
@@ -477,7 +477,7 @@ function HomeContent() {
                   </p>
                 </div>
                 <div className="flex flex-col items-center gap-4 group">
-                  <div className="w-16 h-16 rounded-full bg-[#FAFAFA] flex items-center justify-center group-hover:bg-[#E65100]/10 transition-colors">
+                  <div className="w-16 h-16 rounded-full bg-[#FAFAFA] flex items-center justify-center group-hover:bg-brand/10 transition-colors">
                     <Heart className="w-8 h-8 text-rose-500" />
                   </div>
                   <h3 className="text-xl font-bold">あなただけのマッチ度</h3>
@@ -488,7 +488,7 @@ function HomeContent() {
                   </p>
                 </div>
                 <div className="flex flex-col items-center gap-4 group">
-                  <div className="w-16 h-16 rounded-full bg-[#FAFAFA] flex items-center justify-center group-hover:bg-[#E65100]/10 transition-colors">
+                  <div className="w-16 h-16 rounded-full bg-[#FAFAFA] flex items-center justify-center group-hover:bg-brand/10 transition-colors">
                     <Award className="w-8 h-8 text-[#C5A059]" />
                   </div>
                   <h3 className="text-xl font-bold">失敗しないお店選び</h3>
@@ -508,12 +508,12 @@ function HomeContent() {
 
       {/* リスト表示（検索結果） */}
       {viewState === "LIST" && (
-        <div className="pt-32 pb-24 min-h-screen bg-slate-50">
+        <div className="pt-32 pb-24 min-h-screen bg-brand-gray/20">
           <div className="container mx-auto px-6 mb-8">
             <div className="flex flex-col gap-6">
               <button
                 onClick={resetHome}
-                className="flex items-center gap-2 text-slate-500 hover:text-[#E65100] transition-colors w-fit font-medium"
+                className="flex items-center gap-2 text-brand-black/80 hover:text-brand transition-colors w-fit font-medium"
               >
                 <ArrowLeft className="w-5 h-5" />
                 ホーム
@@ -529,25 +529,24 @@ function HomeContent() {
               <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-top-4 duration-500 w-full max-w-4xl mx-auto">
 
                 {/* Auto Personalize Toggle */}
-                <div className="w-full border border-slate-200 pl-6 pr-6 rounded-xl bg-white/50 overflow-hidden shadow-sm">
-                  <div className="bg-slate-50/50 pt-5">
-                    <p className="text-sm text-slate-500 font-bold text-center mb-4">あなたが重視するポイントに合わせて、スコアを最適化します。</p>
+                <div className="w-full border border-brand-gray pl-6 pr-6 rounded-xl bg-white/50 overflow-hidden shadow-sm">
+                  <div className="bg-brand-gray/20/50 pt-5">
+                    <p className={`text-sm text-brand-black/80 font-bold text-center ${!user ? 'mb-12' : 'mb-2'}`}>あなたが重視するポイントに合わせて、スコアを最適化します。</p>
 
                     {/* Tab Navigation */}
-                    <div className="flex justify-center mb-0 border-b border-slate-200 w-full">
+                    <div className="flex justify-center mb-0 border-b border-brand-gray w-full">
                       <div className="flex gap-8 relative">
                         <button
                           onClick={() => setIsAutoPersonalize(false)}
-                          className={`pb-3 px-2 text-sm font-bold transition-all relative ${!isAutoPersonalize ? 'text-[#E65100]' : 'text-slate-400 hover:text-slate-600'}`}
+                          className={`pb-3 px-2 text-sm font-bold transition-all relative ${!isAutoPersonalize ? 'text-brand' : 'text-brand-black/50 hover:text-brand-black/80'}`}
                         >
                           手動選択
                           {!isAutoPersonalize && (
-                            <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#E65100] rounded-t-full" />
+                            <div className="absolute bottom-0 left-0 w-full h-0.5 bg-brand rounded-t-full" />
                           )}
                         </button>
 
-                        <div className="flex items-center gap-3">
-
+                        <div className="flex items-center gap-3 relative">
 
                           <button
                             onClick={() => {
@@ -557,21 +556,28 @@ function HomeContent() {
                               }
                               setIsAutoPersonalize(true);
                             }}
-                            className={`pb-3 px-2 text-sm font-bold transition-all relative flex items-center gap-2 ${isAutoPersonalize ? 'text-[#E65100]' : 'text-slate-400 hover:text-slate-600'}`}
+                            className={`pb-3 px-2 text-sm font-bold transition-all relative flex items-center gap-2 ${isAutoPersonalize ? 'text-brand' : 'text-brand-black/50 hover:text-brand-black/80'}`}
                           >
                             <Sparkles className="w-3.5 h-3.5" />
                             傾向を自動反映
                             {isAutoPersonalize && (
-                              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[#E65100] rounded-t-full" />
+                              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-brand rounded-t-full" />
                             )}
                           </button>
 
                           {/* Tooltip for non-logged-in users */}
                           {!user && (
-                            <div className="bg-slate-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg relative animate-in fade-in slide-in-from-left-2 z-20 pointer-events-none whitespace-nowrap flex items-center">
-                              <span className="shrink-0">ログインして傾向をAIに学習させませんか？</span>
-                              {/* Left Arrow */}
-                              <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-800" />
+                            <div className="
+                              absolute z-20 pointer-events-none whitespace-nowrap bg-brand-black text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg
+                              bottom-full mb-3 left-1/2 -translate-x-1/2
+                              animate-in fade-in zoom-in-95 duration-300
+                            ">
+                              <span className="shrink-0">ログインして傾向をAIに学習</span>
+                              {/* Arrow */}
+                              <div className="
+                                absolute border-4 border-transparent
+                                top-full left-1/2 -translate-x-1/2 border-t-brand-black
+                              " />
                             </div>
                           )}
                         </div>
@@ -586,9 +592,9 @@ function HomeContent() {
                         <div className="flex flex-col gap-3">
                           <div className="flex flex-wrap gap-2 justify-center">
                             {[
-                              { id: 'taste', label: '味・料理', icon: Utensils },
-                              { id: 'service', label: '接客・サービス', icon: Heart },
-                              { id: 'atmosphere', label: '雰囲気・空間', icon: Sparkles },
+                              { id: 'taste', label: '味', icon: Utensils },
+                              { id: 'service', label: '接客', icon: Heart },
+                              { id: 'atmosphere', label: '雰囲気', icon: Sparkles },
                               { id: 'cost', label: 'コスパ', icon: TrendingUp },
                             ].map((axis) => (
                               <SelectionButton
@@ -607,12 +613,15 @@ function HomeContent() {
                     ) : (
                       <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-300 w-full mb-6">
                         {/* Chart Container */}
-                        <p className="text-xs text-slate-500 mt-4 text-center">
-                          あなたの過去の評価やリスト保存したお店の傾向から分析しています
+                        <p className="text-sm text-brand-black/80 mt-4 text-center">
+                          あなたの過去の評価(Good/Bad)から傾向を分析しています。
                         </p>
                         <div className="w-full max-w-sm">
                           <UserPreferenceRadar preferences={profile?.aiPreferences} compact />
                         </div>
+                        <p className="text-xs text-brand-black/50 mb-2 text-center">
+                          💡 4軸の傾向に加え、700以上の特徴量からあなたの好みを深く分析しています
+                        </p>
                       </div>
                     )}
                   </div>
@@ -620,7 +629,7 @@ function HomeContent() {
 
                 {/* 2. Global Scenarios (Now outside personalization box) */}
                 <div className="flex flex-col gap-3 mt-4">
-                  <h3 className="text-sm text-slate-500 font-bold uppercase tracking-wider text-center">利用シーン絞り込み</h3>
+                  <h3 className="text-sm text-brand-black/80 font-bold uppercase tracking-wider text-center">利用シーン絞り込み</h3>
                   <div className="flex flex-wrap gap-2 justify-center">
                     {[
                       { id: 'business', label: 'ビジネス' },
@@ -644,8 +653,8 @@ function HomeContent() {
 
               {/* Sort Controls */}
               <div className="flex flex-col items-center mt-6 gap-2">
-                <span className="text-sm text-slate-500 font-bold">並び替え</span>
-                <div className="bg-white p-1 rounded-full border border-slate-200 flex shadow-sm">
+                <span className="text-sm text-brand-black/80 font-bold">並び替え</span>
+                <div className="bg-white p-1 rounded-full border border-brand-gray flex shadow-sm">
                   <SelectionButton
                     isSelected={sortBy === 'match'}
                     onClick={() => setSortBy('match')}
@@ -674,8 +683,8 @@ function HomeContent() {
           </div>
           <div className="flex-1 w-full min-w-0">
             {loading && filteredPlaces.length === 0 ? (
-              <div className="py-20 flex flex-col items-center justify-center text-slate-500 animate-pulse bg-white/50 rounded-xl border border-dashed border-slate-200">
-                <MapPin className="mb-4 w-10 h-10 text-slate-300" />
+              <div className="py-20 flex flex-col items-center justify-center text-brand-black/80 animate-pulse bg-white/50 rounded-xl border border-dashed border-brand-gray">
+                <MapPin className="mb-4 w-10 h-10 text-brand-black/50" />
                 <p className="font-bold text-lg">Googleマップから最新情報を検索中...</p>
                 <p className="text-sm mt-2">※AI分析はバックグラウンドで行われます</p>
               </div>
@@ -716,7 +725,7 @@ function HomeContent() {
                   if (focusedScenes.length > 0) params.set("scenes", focusedScenes.join(","));
                   router.push(`/?${params.toString()}`);
                 }}
-                className="flex items-center gap-2 text-slate-500 hover:text-[#E65100] transition-colors font-medium"
+                className="flex items-center gap-2 text-brand-black/80 hover:text-brand transition-colors font-medium"
               >
                 <ArrowLeft className="w-5 h-5" />
                 戻る
@@ -734,7 +743,7 @@ function HomeContent() {
                   return (
                     <button
                       onClick={() => handlePlaceSelect(prevPlace.id)}
-                      className="flex items-center gap-2 text-slate-500 hover:text-[#E65100] transition-colors font-medium"
+                      className="flex items-center gap-2 text-brand-black/80 hover:text-brand transition-colors font-medium"
                     >
                       <ArrowLeft className="w-5 h-5" />
                       前の店
@@ -753,7 +762,7 @@ function HomeContent() {
                   return (
                     <button
                       onClick={() => handlePlaceSelect(nextPlace.id)}
-                      className="flex items-center gap-2 text-slate-500 hover:text-[#E65100] transition-colors font-medium"
+                      className="flex items-center gap-2 text-brand-black/80 hover:text-brand transition-colors font-medium"
                     >
                       次の店
                       <ArrowLeft className="w-5 h-5 rotate-180" />
@@ -773,10 +782,7 @@ function HomeContent() {
             />
           </div>
         )}
-
-
-
-
+      {(viewState === "LIST" || viewState === "DETAIL") && <ComparisonTray />}
     </main >
   );
 }
@@ -785,7 +791,7 @@ export default function Home() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-[#FAFAFA]">
-        <div className="animate-pulse text-[#E65100]">Loading...</div>
+        <div className="animate-pulse text-brand">Loading...</div>
       </div>
     }>
       <HomeContent />

@@ -1,12 +1,13 @@
 'use client';
 
 import { Place } from '@/types/schema';
-import { Star, MapPin, ChevronRight, Loader2, Train } from 'lucide-react';
+import { Star, MapPin, ChevronRight, Loader2, Train, Scale, DollarSign } from 'lucide-react';
 import { PlaceBadges } from '@/components/PlaceBadges';
 import { updateStationInfo } from '@/server/actions/station';
 import { useEffect, useState } from 'react';
 import { ActionButtons } from '@/components/ActionButtons';
 import { useAuth } from '@/contexts/AuthContext';
+import { useComparison } from '@/contexts/ComparisonContext';
 
 interface PlaceListItemProps {
     place: Place;
@@ -19,11 +20,17 @@ interface PlaceListItemProps {
 
 export default function PlaceListItem({ place, onSelect, focusedAxes = [], focusedScenes = [], onActionComplete, ...props }: PlaceListItemProps) {
     const { user } = useAuth();
+    const { selectedPlaces, toggleSelection } = useComparison();
+
+    // Check if selected
+    const isSelected = selectedPlaces.some(p => p.id === place.id);
+
     const isAnalyzed = place.status === 'completed' && place.trueScore !== undefined;
     const isAnalyzing = place.status === 'pending' || place.status === 'processing';
 
     // Personalized Score Calculation
     const calculatePersonalizedScore = () => {
+        // ... (省略) ...
         // Only calculate personalized score if AXES are selected. Scenarios are now filters only.
         if (!place.axisScores || focusedAxes.length === 0) return null;
 
@@ -46,8 +53,6 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
             totalWeight += weight;
         });
 
-        // Scenarios removed from scoring logic
-
         return totalScore / totalWeight;
     };
 
@@ -56,33 +61,18 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
     // Async trigger for station info
     useEffect(() => {
         if (!place.id || !place.location || place.nearestStation !== undefined) return;
-
-        // Trigger server action (fire and forget, Firestore listener will update UI)
-        // Check local storage or session to avoid spamming if implemented, but here relying on place.nearestStation check
-        // Note: nearestStation undefined means not checked. If null/empty logic handled in server action (we might want a flag to prevent loops)
-        // For now, simple check.
         updateStationInfo(place.id, place.location.lat, place.location.lng);
     }, [place.id, place.location, place.nearestStation]);
 
     return (
         <div
             onClick={() => onSelect(place.id)}
-            className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-xl border border-slate-100 transition-all duration-300 cursor-pointer group flex flex-col h-full select-none active:scale-[0.98] active:bg-slate-50 relative"
+            className={`bg-white rounded-2xl p-6 shadow-sm hover:shadow-xl border transition-all duration-300 cursor-pointer group flex flex-col h-full select-none active:scale-[0.98] active:bg-brand-gray/20 relative ${isSelected ? 'border-brand ring-1 ring-brand' : 'border-brand-gray'}`}
         >
-            {/* Action Buttons (Absolute Top-Right for quick access) */}
-            <div
-                className="absolute top-4 right-4 z-10"
-                onClick={(e) => e.stopPropagation()}
-            >
-                <div className="scale-90 origin-top-right">
-                    <ActionButtons place={place} uid={user?.uid} onActionComplete={onActionComplete} />
-                </div>
-            </div>
-
             {/* Image & Header Section */}
             <div className="flex gap-4 mb-4">
-                {place.hotpepper?.imageUrl && (
-                    <div className="relative shrink-0 w-24 h-24 rounded-xl overflow-hidden shadow-sm border border-slate-100">
+                {place.hotpepper?.imageUrl ? (
+                    <div className="relative shrink-0 w-24 h-24 rounded-xl overflow-hidden shadow-sm border border-brand-gray">
                         <img
                             src={place.hotpepper.imageUrl}
                             alt={place.name}
@@ -90,22 +80,54 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
                             onError={(e) => (e.currentTarget.style.display = 'none')}
                         />
                     </div>
+                ) : (
+                    <div className="relative shrink-0 w-24 h-24 rounded-xl overflow-hidden shadow-sm border border-brand-gray bg-brand-gray/10 flex flex-col items-center justify-center text-brand-black/50">
+                        <span className="text-[10px] font-bold">No Image</span>
+                    </div>
                 )}
                 <div className="flex-grow min-w-0">
                     <div className="flex justify-between items-start">
-                        <div className="pr-24"> {/* Add padding for absolute buttons */}
-                            <h3 className="text-xl font-bold text-slate-900 group-hover:text-orange-600 transition-colors line-clamp-2 md:line-clamp-1 mb-1">
+                        <div className="pr-16">
+                            <h3 className="text-xl font-bold text-brand-black group-hover:text-brand transition-colors line-clamp-2 md:line-clamp-1 mb-1">
                                 {place.name}
                             </h3>
+                            {/* Price & Station Info */}
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-brand-black/80 font-medium">
+                                <div className="flex items-center gap-1">
+                                    <span>
+                                        {(() => {
+                                            if (place.priceRange?.startPrice || place.priceRange?.endPrice) {
+                                                const s = place.priceRange.startPrice?.units;
+                                                const e = place.priceRange.endPrice?.units;
+                                                return `${s ? '¥' + Number(s).toLocaleString() : ''}〜${e ? '¥' + Number(e).toLocaleString() : ''}`;
+                                            }
+                                            switch (place.priceLevel) {
+                                                case 'PRICE_LEVEL_FREE': return '無料';
+                                                case 'PRICE_LEVEL_INEXPENSIVE': return '〜1,000円';
+                                                case 'PRICE_LEVEL_MODERATE': return '1,000円〜3,000円';
+                                                case 'PRICE_LEVEL_EXPENSIVE': return '3,000円〜10,000円';
+                                                case 'PRICE_LEVEL_VERY_EXPENSIVE': return '10,000円〜';
+                                                default: return '予算不明';
+                                            }
+                                        })()}
+                                    </span>
+                                </div>
+                                {place.nearestStation && (
+                                    <div className="flex items-center gap-1">
+                                        <Train className="w-3.5 h-3.5" />
+                                        <span>{place.nearestStation}</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                     {/* Google Badge */}
                     <div className="flex items-center gap-2 mt-1">
-                        <div className="flex items-center bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
-                            <div className="text-[10px] text-slate-400 font-bold mr-1 tracking-wide">GOOGLE</div>
+                        <div className="flex items-center bg-brand-gray/20 px-2 py-1 rounded-lg border border-brand-gray">
+                            <div className="text-[10px] text-brand-black/50 font-bold mr-1 tracking-wide">Google</div>
                             <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400 mr-1" />
-                            <span className="font-bold text-slate-700 text-sm">{place.originalRating?.toFixed(1) || '0.0'}</span>
-                            <span className="text-[10px] text-slate-400 ml-1">({place.userRatingsTotal || 0})</span>
+                            <span className="font-bold text-brand-black/80 text-sm">{place.originalRating?.toFixed(1) || '0.0'}</span>
+                            <span className="text-[10px] text-brand-black/50 ml-1">({place.userRatingsTotal || 0})</span>
                         </div>
                     </div>
                 </div>
@@ -117,7 +139,7 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
             </div>
 
             {/* AI Analysis Score Badge */}
-            <div className="mb-4 p-4 bg-slate-50 rounded-xl border border-slate-100 relative overflow-hidden">
+            <div className="mb-4 p-4 bg-brand-gray/20 rounded-xl border border-brand-gray relative overflow-hidden">
                 {isAnalyzed ? (
                     <div className="flex flex-col gap-3">
                         {/* Personalized Score Display (Prominent if active) */}
@@ -125,12 +147,12 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
                             <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                                 <div className="flex items-center justify-between mb-2">
                                     <div>
-                                        <span className="text-base font-bold text-[#E65100] block mb-1">あなたへのマッチ度</span>
+                                        <span className="text-base font-bold text-brand block mb-1">あなたとのマッチ度</span>
                                         <div className="flex items-baseline gap-2">
-                                            <span className="text-xl font-black text-[#E65100]">
+                                            <span className="text-xl font-black text-brand">
                                                 {yourScore.toFixed(1)}
                                             </span>
-                                            <div className="flex text-orange-500">
+                                            <div className="flex text-brand">
                                                 {[...Array(5)].map((_, i) => (
                                                     <Star
                                                         key={i}
@@ -142,8 +164,8 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
                                     </div>
                                     {/* Standard AI Score (Secondary) */}
                                     <div className="text-right opacity-75">
-                                        <span className="text-xs font-bold text-slate-400 block">AI分析スコア</span>
-                                        <span className="text-lg font-bold text-slate-500">{place.trueScore?.toFixed(1)}</span>
+                                        <span className="text-xs font-bold text-brand-black/50 block">AI分析スコア</span>
+                                        <span className="text-lg font-bold text-brand-black/80">{place.trueScore?.toFixed(1)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -151,12 +173,12 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
                             // Standard AI Score Only
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <span className="text-base font-bold text-[#E65100] block mb-1">AI分析スコア</span>
+                                    <span className="text-base font-bold text-brand block mb-1">AI分析スコア</span>
                                     <div className="flex items-baseline gap-2">
-                                        <span className="text-xl font-black text-[#E65100]">
+                                        <span className="text-xl font-black text-brand">
                                             {place.trueScore?.toFixed(1)}
                                         </span>
-                                        <div className="flex text-orange-500">
+                                        <div className="flex text-brand">
                                             {[...Array(5)].map((_, i) => (
                                                 <Star
                                                     key={i}
@@ -171,7 +193,7 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
 
                         {/* Axis Scores */}
                         {place.axisScores && (
-                            <div className="grid grid-cols-4 gap-2 pt-3 border-t border-slate-200">
+                            <div className="grid grid-cols-4 gap-2 pt-3 border-t border-brand-gray">
                                 {[
                                     { k: 'taste', l: '味' },
                                     { k: 'service', l: '接客' },
@@ -182,10 +204,10 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
                                     const score = place.axisScores?.[axis.k as keyof typeof place.axisScores] || 0;
                                     return (
                                         <div key={axis.k} className="text-center">
-                                            <div className={`text-[10px] mb-0.5 ${isFocused ? 'text-[#E65100] font-bold' : 'text-slate-400'}`}>
+                                            <div className={`text-[10px] mb-0.5 ${isFocused ? 'text-brand font-bold' : 'text-brand-black/50'}`}>
                                                 {axis.l}
                                             </div>
-                                            <div className={`text-sm font-bold ${isFocused ? 'text-[#E65100]' : 'text-slate-600'}`}>
+                                            <div className={`text-sm font-bold ${isFocused ? 'text-brand' : 'text-brand-black/80'}`}>
                                                 {score.toFixed(1)}
                                             </div>
                                         </div>
@@ -195,41 +217,51 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
                         )}
                     </div>
                 ) : isAnalyzing ? (
-                    <div className="flex items-center justify-center py-4 gap-2 text-[#E65100]">
+                    <div className="flex items-center justify-center py-4 gap-2 text-brand">
                         <Loader2 className="w-5 h-5 animate-spin" />
                         <span className="text-sm font-bold">AI分析中...</span>
                     </div>
                 ) : (
-                    <div className="flex items-center justify-center py-4 text-slate-400 text-sm">
+                    <div className="flex items-center justify-center py-4 text-brand-black/50 text-sm">
                         分析待ち
                     </div>
                 )}
             </div>
 
-            <div className="mt-auto pt-4 flex items-center justify-between text-xs text-slate-400 border-t border-slate-50">
-                <div className="flex items-center gap-1">
-                    {place.nearestStation ? (
-                        <>
-                            <Train className="w-3 h-3 text-[#E65100]" />
-                            <span className="line-clamp-1 max-w-[150px] font-medium text-slate-600">{place.nearestStation}</span>
-                        </>
-                    ) : (
-                        <>
-                            <MapPin className="w-3 h-3" />
-                            <span className="line-clamp-1 max-w-[150px]">{place.address}</span>
-                        </>
-                    )}
+            <div className="mt-auto pt-4 flex items-center justify-between text-xs text-brand-black/50 border-t border-brand-gray/20">
+                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    {/* Compare Toggle */}
+                    <button
+                        onClick={() => toggleSelection(place)}
+                        className={`relative rounded-full text-xs font-bold transition-all duration-300 shadow-sm hover:shadow-md group ${isSelected
+                            ? 'bg-brand text-white px-3 py-1.5 border border-brand'
+                            : 'p-[1.5px] bg-gradient-to-r from-orange-400 via-rose-300 to-orange-400 hover:from-orange-500 hover:via-rose-400 hover:to-orange-500'
+                            }`}
+                    >
+                        {isSelected ? (
+                            <div className="flex items-center gap-1.5">
+                                <Scale className="w-3.5 h-3.5" />
+                                <span>選択済み</span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white rounded-full transition-colors w-full h-full">
+                                <Scale className="w-3.5 h-3.5 text-orange-500" />
+                                <span className="bg-gradient-to-r from-orange-600 to-rose-600 bg-clip-text text-transparent">トレイに追加</span>
+                            </div>
+                        )}
+                    </button>
+
+                    {/* Action Buttons */}
+                    <div className="scale-90 origin-left">
+                        <ActionButtons place={place} uid={user?.uid} onActionComplete={onActionComplete} />
+                    </div>
                 </div>
-                <div className="flex items-center gap-1 text-[#E65100] font-medium group-hover:translate-x-1 transition-transform">
+
+                <div className="flex items-center gap-1 text-brand font-medium group-hover:translate-x-1 transition-transform">
                     View Details
                     <ChevronRight className="w-3 h-3" />
                 </div>
             </div>
-            {place.hotpepper && (
-                <div className="text-[10px] text-slate-300 text-right pr-1 pt-1">
-                    Powered by HotPepper
-                </div>
-            )}
         </div>
     );
 }
