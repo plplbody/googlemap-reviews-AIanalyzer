@@ -2,6 +2,7 @@
 
 import { GoogleAuth } from 'google-auth-library';
 import { getFirestore } from '@/lib/firebase/admin';
+import { firestore } from 'firebase-admin';
 import { enqueueAnalysis } from '@/lib/queue/client';
 import { Place } from '@/types/schema';
 import { searchHotPepperPlace } from '@/lib/hotpepper/client';
@@ -19,7 +20,6 @@ function sanitizeLog(text: string): string {
 }
 
 export async function getPlaceDetails(placeId: string): Promise<string> {
-    // Security: Input Length Validation
     // Security: Input Length Validation
     if (placeId.length > MAX_QUERY_LENGTH) {
         console.warn(`[Security] PlaceId too long: ${placeId.length} chars.`);
@@ -186,7 +186,8 @@ export interface PlaceSearchResult {
     hotpepper?: any;
 }
 
-async function searchPlacesIdOnly(query: string): Promise<string[]> {
+// NOTE: This function is kept for utility purposes but not used in the main searchPlaces flow (Optimization)
+async function searchPlacesIdOnly(query: string, pageToken?: string): Promise<{ ids: string[], nextPageToken?: string }> {
     console.log(`Searching places (ID only) for: ${query}`);
     try {
         const auth = new GoogleAuth({
@@ -195,18 +196,24 @@ async function searchPlacesIdOnly(query: string): Promise<string[]> {
         const client = await auth.getClient();
         const token = await client.getAccessToken();
 
+        const requestBody: any = {
+            textQuery: query,
+            languageCode: 'ja',
+            maxResultCount: 20
+        };
+
+        if (pageToken) {
+            requestBody.pageToken = pageToken;
+        }
+
         const response = await fetch('https://places.googleapis.com/v1/places:searchText', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token.token}`,
-                'X-Goog-FieldMask': 'places.id'
+                'X-Goog-FieldMask': 'places.id,nextPageToken'
             },
-            body: JSON.stringify({
-                textQuery: query,
-                languageCode: 'ja',
-                maxResultCount: 20
-            })
+            body: JSON.stringify(requestBody)
         });
 
         if (!response.ok) {
@@ -214,10 +221,13 @@ async function searchPlacesIdOnly(query: string): Promise<string[]> {
         }
 
         const data = await response.json();
-        return data.places?.map((p: any) => p.id) || [];
+        return {
+            ids: data.places?.map((p: any) => p.id) || [],
+            nextPageToken: data.nextPageToken
+        };
     } catch (error) {
         console.error('Failed to search places (ID only):', error);
-        return [];
+        return { ids: [] };
     }
 }
 
@@ -232,19 +242,15 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export async function searchPlaces(query: string, pageToken?: string): Promise<PlaceSearchResponse> {
     // Security: Input Length Validation
     if (query.length > MAX_QUERY_LENGTH) {
-        console.warn(`[Security] Query too long: ${query.length} chars. Truncated.`);
         throw new Error(`検索キーワードが長すぎます（最大${MAX_QUERY_LENGTH}文字）`);
     }
-
-    // Security: Rate Limit
     await checkRateLimit();
-
-    console.log(`Searching places list for: ${query}, pageToken: ${pageToken ? 'Yes' : 'No'}`);
+    console.log(`Searching places list (COST OPTIMIZED) for: ${query}`);
 
     try {
-        // [Logic Change] Reverted to Single Page Fetch (Max 20) for UX responsiveness
-        // The client will handle "Load More" or "Auto Load" for subsequent pages.
-
+        // [Cost Strategy] Use Bulk Text Search (1 Request = 20 Items)
+        // Optimized: Single API call. 
+        // Checks cache (Status) after fetching to avoid Re-Analysis costs.
         const data = await fetchRawGooglePlaces(query, pageToken);
         const results: PlaceSearchResult[] = [];
         const items = data.places || [];
@@ -253,6 +259,24 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
             const db = getFirestore();
             const placesRef = db.collection('places');
             const batch = db.batch();
+
+            // 1. Fetch Existing Docs to check status
+            const ids = items.map((p: any) => p.id);
+            // Firestore 'in' query limit is 30. items length is max 20.
+            const existingDocs = await placesRef.where(firestore.FieldPath.documentId(), 'in', ids).get();
+            const existingMap = new Map<string, Place>();
+            existingDocs.forEach(doc => {
+                existingMap.set(doc.id, doc.data() as Place);
+            });
+
+            // List of IDs that need analysis
+            const placesToAnalyze: string[] = [];
+
+            // HotPepper Phone Map
+            const phoneMap = new Map<string, string>();
+            items.forEach((p: any) => {
+                if (p.nationalPhoneNumber) phoneMap.set(p.id, p.nationalPhoneNumber);
+            });
 
             for (const placeData of items) {
                 // Determine Reviews
@@ -266,6 +290,31 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
                     if (adminArea) area.push(adminArea.longText);
                     if (locality) area.push(locality.longText);
                     area = Array.from(new Set(area));
+                }
+
+                // Check Cache Status
+                const existing = existingMap.get(placeData.id);
+                let shouldAnalyze = true;
+                let statusToSet = 'pending';
+                let hotpepperData = existing?.hotpepper;
+
+                if (existing) {
+                    // Check for expiration (30 days)
+                    const now = new Date();
+                    const updatedAt = existing.updatedAt ? (existing.updatedAt as any).toDate() : new Date(0);
+                    const diffTime = Math.abs(now.getTime() - updatedAt.getTime());
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                    if (diffDays <= 30 && (existing.status === 'completed' || existing.status === 'processing')) {
+                        // Valid cache exists
+                        shouldAnalyze = false;
+                        statusToSet = existing.status;
+                        // console.log(`[Cache Hit] Place ${placeData.id}. Skipping analysis.`);
+                    }
+                }
+
+                if (shouldAnalyze) {
+                    placesToAnalyze.push(placeData.id);
                 }
 
                 // Prepare Place Object
@@ -290,7 +339,7 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
                             delivery: placeData.delivery,
                             takeout: placeData.takeout,
                             dineIn: placeData.dineIn,
-                            reservable: placeData.reservable
+                            reservable: data.reservable
                         },
                         offerings: {
                             servesBeer: placeData.servesBeer,
@@ -309,13 +358,10 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
                             goodForGroups: placeData.goodForGroups
                         }
                     },
-                    // Prevent overwriting status if it's already 'analyzed'
-                    // Actually, if we re-fetch, it might mean we want to re-analyze?
-                    // Safe approach: set to 'pending' only if new or error.
-                    // But here we are doing a "Search", so maybe we just update basic info?
-                    // Let's set 'pending' to trigger analysis update if needed.
-                    status: 'pending',
+                    status: statusToSet as any,
+                    createdAt: existing ? existing.createdAt : new Date(),
                     updatedAt: new Date(),
+                    ...(hotpepperData ? { hotpepper: hotpepperData } : {})
                 };
 
                 // Add to Result List
@@ -324,35 +370,31 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
                     name: placeData.displayName?.text || 'Unknown',
                     rating: placeData.rating || 0,
                     userRatingsTotal: placeData.userRatingCount || 0,
-                    vicinity: placeData.formattedAddress
+                    vicinity: placeData.formattedAddress,
+                    hotpepper: hotpepperData
                 });
 
                 const ref = placesRef.doc(placeData.id);
-                // We use set with merge to update existing records
                 batch.set(ref, newPlace, { merge: true });
             }
 
             await batch.commit();
 
-            // Fire-and-forget: HotPepper Integration & Analysis
+            // Fire-and-forget: HotPepper & Analysis
             (async () => {
-                // HotPepper
-                const phoneMap = new Map<string, string>();
-                items.forEach((p: any) => {
-                    if (p.nationalPhoneNumber) phoneMap.set(p.id, p.nationalPhoneNumber);
-                });
-                for (const res of results) {
-                    const tel = phoneMap.get(res.id);
-                    integrateHotPepperInfo(res.id, res.name, tel).catch(e => console.error(e));
+                // Analysis
+                for (const placeId of placesToAnalyze) {
+                    enqueueAnalysis(placeId).catch(e => console.error(`Failed to enqueue ${placeId}`, e));
                 }
 
-                // Analysis Trigger
-                // We only invoke enqueueAnalysis if status is pending/error. 
-                // Since we set status='pending' above (via merge), we should queue it.
-                // Optimally, check if it was already analyzed? 
-                // For now, keep it simple: Ensure analysis runs for searched items.
+                // HotPepper
                 for (const res of results) {
-                    enqueueAnalysis(res.id).catch(e => console.error(`Failed to enqueue ${res.id}`, e));
+                    if (!res.hotpepper) {
+                        const tel = phoneMap.get(res.id);
+                        if (tel) {
+                            integrateHotPepperInfo(res.id, res.name, tel).catch(e => console.error(e));
+                        }
+                    }
                 }
             })();
         }
@@ -368,7 +410,6 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
     }
 }
 
-// Extracted Helper for Raw Fetch to keep main function clean(er)
 async function fetchRawGooglePlaces(query: string, pageToken?: string) {
     const auth = new GoogleAuth({
         scopes: 'https://www.googleapis.com/auth/cloud-platform'

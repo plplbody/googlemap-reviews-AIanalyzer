@@ -1,7 +1,7 @@
 'use client';
 
 import { Place } from '@/types/schema';
-import { Star, MapPin, ChevronRight, Loader2, Train, Scale, DollarSign } from 'lucide-react';
+import { Star, MapPin, ChevronRight, Loader2, Train, Scale, DollarSign, Sparkles } from 'lucide-react';
 import { PlaceBadges } from '@/components/PlaceBadges';
 import { updateStationInfo } from '@/server/actions/station';
 import { useEffect, useState } from 'react';
@@ -213,6 +213,18 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
                                         </div>
                                     );
                                 })}
+                            </div>
+                        )}
+
+                        {/* AI Summary */}
+                        {place.summary && (
+                            <div className="flex flex-col gap-1.5 mt-3 pt-3 border-t border-brand-gray/50">
+                                {(Array.isArray(place.summary) ? place.summary : (place.summary as unknown as string).split('\n')).filter((line: string) => line.trim()).map((line: string, i: number) => (
+                                    <div key={i} className="flex items-start gap-2 text-xs text-brand-black/80">
+                                        <Sparkles className="w-3 h-3 text-brand shrink-0 mt-0.5" />
+                                        <span className="leading-relaxed">{line}</span>
+                                    </div>
+                                ))}
                             </div>
                         )}
                     </div>

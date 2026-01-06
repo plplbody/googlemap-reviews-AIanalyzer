@@ -89,75 +89,86 @@ export async function analyzePlace(placeId: string): Promise<void> {
 
         // 4. Call Gemini API
         const prompt = `
-      Analyze the following reviews for a restaurant and provide scores (0-5) for Taste, Service, Atmosphere, and Cost.
-      Also calculate a "True Score" (AI Analysis Score / AI分析スコア) which is a weighted average based on sentiment reliability, and a brief summary.
+      Analyze the following reviews for a restaurant and provide scores(0 - 5) for Taste, Service, Atmosphere, and Cost.
+      Also calculate a "True Score"(AI Analysis Score / AI分析スコア) which is a weighted average based on sentiment reliability, and a detailed bullet - point summary.
       
-      **CRITICAL INSTRUCTION: The output JSON content MUST BE WRITTEN IN JAPANESE.**
+      ** CRITICAL INSTRUCTION: The output JSON content MUST BE WRITTEN IN JAPANESE.**
 
-      **Detailed Place Information (Basic Info Tab):**
-      ${detailedInfoText}
+      ** Detailed Place Information(Basic Info Tab):**
+            ${detailedInfoText}
 
-      **IMPORTANT RULES FOR SCORING:**
-      1. **NO PRIOR KNOWLEDGE**: Do NOT use any external knowledge about this brand or place. Rely ONLY on the provided reviews and the "Detailed Place Information".
-      2. **EVIDENCE BASED**: If the reviews do not contain specific information about an axis (e.g., Cost), you MUST assign a score of **3 (Neutral)**. Do not guess.
-      3. **STRUCTURED REVIEWS ONLY**: Focus on the logic and reasoning in the reviews. Ignore emotional outbursts without context.
-      4. **USE DETAILED INFO**: Use the "Detailed Place Information" to refine your scores and usage analysis.
-         - **Service**: 
-           - 'reservable': Convenient (Business/Date/Group+).
-           - 'delivery'/'takeout': Flexible.
+      ** IMPORTANT RULES FOR SCORING:**
+            1. ** NO PRIOR KNOWLEDGE **: Do NOT use any external knowledge about this brand or place.Rely ONLY on the provided reviews and the "Detailed Place Information".
+      2. ** EVIDENCE BASED **: If the reviews do not contain specific information about an axis(e.g., Cost), you MUST assign a score of ** 3(Neutral) **.Do not guess.
+      3. ** STRUCTURED REVIEWS ONLY **: Focus on the logic and reasoning in the reviews.Ignore emotional outbursts without context.
+      4. ** USE DETAILED INFO **: Use the "Detailed Place Information" to refine your scores and usage analysis.
+         - ** Service **:
+        - 'reservable': Convenient(Business / Date / Group +).
+           - 'delivery' / 'takeout': Flexible.
            - 'paymentOptions': Cash only is negative for Business.
-         - **Food/Drink**: 
-           - 'servesLunch': Good value/Casual. 
-           - 'servesWine'/'Beer': Good for Dinner/Date/Group.
-         - **Amenities**: 
-           - 'goodForChildren' / 'serviceFlags.child': Critical for Family.
-           - 'goodForGroups': Good for Group/Business.
+         - ** Food / Drink **:
+            - 'servesLunch': Good value / Casual. 
+           - 'servesWine' / 'Beer': Good for Dinner / Date / Group.
+         - ** Amenities **:
+            - 'goodForChildren' / 'serviceFlags.child': Critical for Family.
+           - 'goodForGroups': Good for Group / Business.
            - 'restroom': Basic comfort.
-           - 'privateRoom': Excellent for Business/Date/Group.
-         - **Price**: 
-           - High: Good for Luxury/Business, bad for Casual.
-           - Low: Good for Solo/Student.
+           - 'privateRoom': Excellent for Business / Date / Group.
+         - ** Price **:
+            - High: Good for Luxury / Business, bad for Casual.
+           - Low: Good for Solo / Student.
 
-      Additionally, provide the following detailed insights:
+      **REQUIRED OUTPUT FIELDS & ANALYSIS:**
+
       **CRITICAL: NATURAL LANGUAGE ONLY**
-      - **ALWAYS** paraphrase into natural Japanese.
-      - Example: "goodForChildren: false" -> "子供連れには向かない可能性があります" or "子供向けの設備は明記されていません".
-      - Example: "reservable: true" -> "予約可能です".
+      - **ALWAYS** paraphrase into natural Japanese (e.g., "reservable: true" -> "予約可能です").
       
-      1. "gapReason": Explain why the "AI分析スコア" (True Score) might differ from a typical average rating. Use the term "AI分析スコア" in your explanation, NOT "True Score".
-      2. "axisAnalysis": For EACH axis (taste, service, atmosphere, cost), provide:
-         - "pros": A list of positive points (strings).
-         - "cons": A list of negative points (strings).
-         - "summary": A brief summary string.
+      1. **"gapReason"**:
+         - Explain why the "AI分析スコア" (True Score) might differ from a typical average rating.
+         - Use the term "AI分析スコア" in your explanation, NOT "True Score".
 
-      Evaluate the suitability (0-5) for the following scenarios based on the reviews AND detailed info:
-      - Business (接待・会食): Is it quiet? Good service? Private rooms? Reservable?
-      - Date (デート): Romantic? Good ambiance? Serves wine?
-      - Solo (お一人様): Counter seats? Easy to enter alone?
-      - Family (家族連れ): Kids friendly? Spacious? Good for children?
-      - Group (団体利用): Reservable? Good for groups? Spacious?
+      2. **"axisAnalysis"**:
+         - For EACH axis (taste, service, atmosphere, cost), provide:
+           - "pros": positive points list (strings).
+           - "cons": negative points list (strings).
+           - "summary": brief summary string.
 
-      Also provide a "usageSummary" (string): A brief explanation of why these usage scores were assigned, BASED STRICTLY ON THE REVIEWS AND DETAILED INFO.
-      - Do NOT include your own opinion or negative inferences if not mentioned in the text.
+      3. **"usageScores"**:
+         - Evaluate suitability (0-5) for:
+           - **Business (接待・会食)**: Quiet? Good service? Private rooms? Reservable?
+           - **Date (デート)**: Romantic? Good ambiance? Wine?
+           - **Solo (お一人様)**: Counter seats? Easy to enter?
+           - **Family (家族連れ)**: Kids friendly? Spacious?
+           - **Group (団体利用)**: Reservable? Spacious?
+
+      4. **"usageSummary"**:
+         - Brief explanation of scores based *strictly* on reviews/info.
+         - Do NOT include your own opinion or negative inferences if not mentioned in the text.
       
-      Reviews:
+      5. **"summary"**:
+         - A concise summary of the place's characteristics.
+         - **FORMAT**: JSON ARRAY of strings. Provide 3 to 5 key points.
+         - Example: ["絶品の寿司がリーズナブルに楽しめる", "落ち着いた雰囲気でデートに最適", "予約必須の人気店"]
+
+      **REVIEWS:**
       ${reviewsText}
       
       Output JSON format:
-      \`\`\`json
+        \`\`\`json
       {
         "trueScore": number,
         "axisScores": { "taste": number, "service": number, "atmosphere": number, "cost": number },
         "usageScores": { "business": number, "date": number, "solo": number, "family": number, "group": number },
         "usageSummary": "string",
-        "summary": "string",
+        "summary": ["string", "...", "string"],
         "gapReason": "string",
         "axisAnalysis": {
           "taste": { "pros": ["string"], "cons": ["string"], "summary": "string" },
           "service": { "pros": ["string"], "cons": ["string"], "summary": "string" },
           "atmosphere": { "pros": ["string"], "cons": ["string"], "summary": "string" },
           "cost": { "pros": ["string"], "cons": ["string"], "summary": "string" }
-        }
+        },
+
       }
       \`\`\`
     `;

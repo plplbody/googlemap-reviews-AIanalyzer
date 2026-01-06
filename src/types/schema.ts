@@ -103,7 +103,7 @@ export interface Place {
   axisScores?: AxisScores;
   usageScores?: UsageScores;
   usageSummary?: string; // 利用シーン評価の根拠
-  summary?: string;
+  summary?: string[]; // AI Summary formatted as a list of key points
   gapReason?: string;
   axisAnalysis?: {
     taste: { pros: string[]; cons: string[]; summary: string; };

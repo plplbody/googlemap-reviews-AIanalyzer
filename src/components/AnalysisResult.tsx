@@ -430,7 +430,14 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
                     <div className="space-y-6">
                         <div className="bg-white rounded-3xl shadow-lg border border-brand-gray p-8">
                             <h3 className="text-xl font-bold text-brand-black mb-4">AI分析サマリー</h3>
-                            <p className="text-lg text-brand-black/80 leading-relaxed">{place.summary}</p>
+                            <div className="flex flex-col gap-3">
+                                {(Array.isArray(place.summary) ? place.summary : (place.summary as unknown as string).split('\n')).filter((line: string) => line.trim()).map((line: string, i: number) => (
+                                    <div key={i} className="flex items-start gap-3 text-base text-brand-black/80">
+                                        <Sparkles className="w-5 h-5 text-brand shrink-0 mt-1" />
+                                        <span className="leading-relaxed">{line}</span>
+                                    </div>
+                                ))}
+                            </div>
 
                             {place.gapReason && (
                                 <div className="mt-6 bg-amber-50 border border-amber-200 rounded-2xl p-6">
