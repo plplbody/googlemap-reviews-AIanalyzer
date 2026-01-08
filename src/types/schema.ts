@@ -10,7 +10,7 @@ export interface AxisScores {
 export interface UsageScores {
   business: number; // 接待・会食
   date: number;     // デート
-  solo: number;     // お一人様
+  solo: number;     // 少人数
   family: number;   // 家族連れ
   group: number;    // 団体利用
 }

@@ -29,6 +29,25 @@ export interface UserProfile {
     updatedAt: Timestamp;
 }
 
+export interface UserScenario {
+    id: string;             // Auto-generated ID
+    name: string;           // "一人メシ", "デート"
+    isCustom: boolean;      // true if created by user
+
+    // Semantic Preference Vector (EMA Learned)
+    preferenceVector?: number[]; // 768-dim vector
+
+    // AI Preference (Learned)
+    aiPreferences: {
+        taste: number;
+        service: number;
+        atmosphere: number;
+        cost: number;
+    };
+    
+    updatedAt: Timestamp;
+}
+
 export interface UserInteraction {
     uid: string;
     placeId: string;
@@ -49,15 +68,30 @@ export interface UserInteraction {
         negativeAxes?: ('taste' | 'service' | 'atmosphere' | 'cost')[];
         note?: string;
 
-        // The actual delta vector applied to the user profile (for Undo/Reversal)
-        impactVector?: Record<string, number>;
+        // The actual delta vector applied to the user profile (Global)
+        // Renamed from impactVector for clarity, but keeping fallback logic if needed
+        embeddingImpact?: number[]; 
 
-        // The actual delta applied to axis preferences (for Undo/Reversal)
+        // The actual delta applied to axis preferences (Global)
         axisImpact?: {
             taste: number;
             service: number;
             atmosphere: number;
             cost: number;
+        };
+
+        // NEW: Log for Scenarios (Critical for Undo)
+        // Store independent deltas for each affected scenario
+        scenarioLog?: {
+            [scenarioId: string]: {
+                axisImpact: {
+                    taste: number;
+                    service: number;
+                    atmosphere: number;
+                    cost: number;
+                };
+                embeddingImpact: number[];
+            }
         };
     };
 

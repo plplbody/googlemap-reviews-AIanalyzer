@@ -22,10 +22,10 @@ export function useUserInteractions(uid: string, placeId: string) {
     };
 
     // Primary Action: Submit Evaluation (Good/Good+/Bad/Bad+)
-    const evaluate = async (evaluation: UserInteraction['evaluation'] | null) => {
+    const evaluate = async (evaluation: UserInteraction['evaluation'] | null, scenarioIds?: string[], skipGlobal?: boolean) => {
         setIsLoading(true);
         try {
-            await submitEvaluation(uid, placeId, evaluation as any);
+            await submitEvaluation(uid, placeId, evaluation as any, scenarioIds, skipGlobal);
         } catch (e: any) {
             console.error(e);
             setError(e.message);

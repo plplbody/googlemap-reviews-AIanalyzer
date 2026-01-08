@@ -6,6 +6,7 @@ import { useUserInteractions } from '@/hooks/useUserInteractions';
 import { useUserInteractionStatus } from '@/hooks/useUserInteractionStatus';
 
 import { Bookmark, ThumbsUp, ThumbsDown, Loader2 } from 'lucide-react';
+import { ScenePicker } from './ScenePicker';
 
 interface ActionButtonsProps {
     place: Place;
@@ -29,6 +30,7 @@ export function ActionButtons({ place, uid, onActionComplete }: ActionButtonsPro
 
     // Toast State
     const [showToast, setShowToast] = useState(false);
+    const [showScenePicker, setShowScenePicker] = useState(false);
 
     const handleSaveClick = async () => {
         if (!uid) {
@@ -73,8 +75,11 @@ export function ActionButtons({ place, uid, onActionComplete }: ActionButtonsPro
 
         // Apply Evaluation (Good or Bad) directly
         setOptimisticEval(type);
-        setShowToast(true);
-        setTimeout(() => setShowToast(false), 3000);
+        if (type === 'good') {
+            setShowToast(true);
+            setTimeout(() => setShowToast(false), 3000);
+            setShowScenePicker(true);
+        }
 
         try {
             await evaluate({
@@ -98,12 +103,38 @@ export function ActionButtons({ place, uid, onActionComplete }: ActionButtonsPro
         }
     }, [interaction]);
 
+    const handleSceneSelect = async (scenarioIds: string[]) => {
+        try {
+            // Second pass: Apply to specific scenarios, skipping global
+            await evaluate({
+                type: 'good',
+                timestamp: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 } as any,
+                selectedFeatureKeys: [],
+                negativeFeedback: undefined
+            }, scenarioIds, true);
+            // Re-trigger toast for feedback
+            setShowToast(true);
+            setTimeout(() => setShowToast(false), 3000);
+        } catch (e) {
+            console.error("Failed to update scenario", e);
+        }
+    };
+
     if (isStatusLoading || isLoading) {
         // Optional: Show loading state or just keep buttons disabled / neutral
     }
 
     return (
         <div className="relative">
+            {/* Scene Picker */}
+            {showScenePicker && uid && (
+                <ScenePicker
+                    uid={uid}
+                    onSelect={handleSceneSelect}
+                    onClose={() => setShowScenePicker(false)}
+                />
+            )}
+
             {/* Toast Message */}
             {showToast && (
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 whitespace-nowrap px-4 py-2 bg-brand-black text-white text-xs font-bold rounded-full shadow-lg animate-in fade-in slide-in-from-bottom-2 z-50">

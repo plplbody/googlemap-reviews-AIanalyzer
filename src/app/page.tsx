@@ -94,10 +94,18 @@ function HomeContent() {
   }, [cachedResults, fetchScores]);
 
   // Handler for action completion (e.g. Save/Good/Bad)
+  const [isScoreOutdated, setIsScoreOutdated] = useState(false);
+
+  // Handler for action completion (e.g. Save/Good/Bad)
   const handleActionComplete = async () => {
-    // Re-fetch scores for current list to reflect updated preferences
+    // Mark scores as outdated but do NOT automatically refetch to prevent reordering
+    setIsScoreOutdated(true);
+  };
+
+  const handleRecalculate = async () => {
     if (cachedResults.length > 0) {
       await fetchScores(cachedResults.map(p => p.id));
+      setIsScoreOutdated(false);
     }
   };
 
@@ -699,6 +707,8 @@ function HomeContent() {
                 focusedScenes={focusedScenes}
                 personalizedScores={isAutoPersonalize ? pScores : undefined}
                 onActionComplete={handleActionComplete}
+                isScoreOutdated={isScoreOutdated}
+                onRecalculate={handleRecalculate}
               />
             )}
           </div>

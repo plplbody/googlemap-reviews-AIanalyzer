@@ -116,7 +116,7 @@ export async function analyzePlace(placeId: string): Promise<void> {
            - 'privateRoom': Excellent for Business / Date / Group.
          - ** Price **:
             - High: Good for Luxury / Business, bad for Casual.
-           - Low: Good for Solo / Student.
+           - Low: Good for Solo/Small Group / Student.
 
       **REQUIRED OUTPUT FIELDS & ANALYSIS:**
 
@@ -137,7 +137,7 @@ export async function analyzePlace(placeId: string): Promise<void> {
          - Evaluate suitability (0-5) for:
            - **Business (接待・会食)**: Quiet? Good service? Private rooms? Reservable?
            - **Date (デート)**: Romantic? Good ambiance? Wine?
-           - **Solo (お一人様)**: Counter seats? Easy to enter?
+           - **Solo (少人数/お一人様)**: Good for 1-2 people? Counter or small tables?
            - **Family (家族連れ)**: Kids friendly? Spacious?
            - **Group (団体利用)**: Reservable? Spacious?
 

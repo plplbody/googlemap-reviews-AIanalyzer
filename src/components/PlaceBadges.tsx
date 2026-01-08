@@ -8,7 +8,13 @@ export function PlaceBadges({ place }: { place: Place }) {
             {place.usageScores?.solo && place.usageScores.solo >= 4.0 && (
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full brand-gray text-brand-black/80 border border-brand-gray text-xs font-bold tracking-wide shadow-sm">
                     <User className="w-3 h-3 text-brand-black/80" />
-                    <span>お一人様</span>
+                    <span>少人数</span>
+                </div>
+            )}
+            {place.usageScores?.group && place.usageScores.group >= 4.0 && (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full brand-gray text-brand-black/80 border border-brand-gray text-xs font-bold tracking-wide shadow-sm">
+                    <Users className="w-3 h-3 text-brand-black/80" />
+                    <span>団体</span>
                 </div>
             )}
             {place.usageScores?.date && place.usageScores.date >= 4.0 && (
@@ -27,12 +33,6 @@ export function PlaceBadges({ place }: { place: Place }) {
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full brand-gray text-brand-black/80 border border-brand-gray text-xs font-bold tracking-wide shadow-sm">
                     <Users className="w-3 h-3 text-brand-black/80" />
                     <span>ファミリー</span>
-                </div>
-            )}
-            {place.usageScores?.group && place.usageScores.group >= 4.0 && (
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full brand-gray text-brand-black/80 border border-brand-gray text-xs font-bold tracking-wide shadow-sm">
-                    <Users className="w-3 h-3 text-brand-black/80" />
-                    <span>団体・宴会</span>
                 </div>
             )}
         </div>

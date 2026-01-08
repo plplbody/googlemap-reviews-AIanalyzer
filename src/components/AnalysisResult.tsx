@@ -490,11 +490,11 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
                     <div className="bg-white rounded-3xl shadow-lg border border-brand-gray p-8 md:p-10">
                         <h3 className="text-xl font-bold text-brand-black mb-8">どんなシーンにおすすめ？</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-                            <UsageCard label="ビジネス" subLabel="接待・会食" value={place.usageScores?.business} />
+                            <UsageCard label="少人数" subLabel="ランチ・サク飲み" value={place.usageScores?.solo} />
+                            <UsageCard label="団体" subLabel="宴会・飲み会" value={place.usageScores?.group} />
                             <UsageCard label="デート" subLabel="記念日・カップル" value={place.usageScores?.date} />
-                            <UsageCard label="お一人様" subLabel="ランチ・サク飲み" value={place.usageScores?.solo} />
+                            <UsageCard label="ビジネス" subLabel="接待・会食" value={place.usageScores?.business} />
                             <UsageCard label="ファミリー" subLabel="お子様連れ" value={place.usageScores?.family} />
-                            <UsageCard label="団体利用" subLabel="宴会・飲み会" value={place.usageScores?.group} />
                         </div>
                         {place.usageSummary && (
                             <div className="mt-6 bg-brand-gray/20 border border-brand-gray rounded-2xl p-4 text-sm text-brand-black/80 leading-relaxed">
