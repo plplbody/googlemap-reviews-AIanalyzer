@@ -57,9 +57,9 @@ export function UserPreferenceRadar({ preferences, compact = false }: UserPrefer
                     <Radar
                         name="Preference"
                         dataKey="A"
-                        stroke="#E65100"
+                        stroke="#f54a00"
                         strokeWidth={2}
-                        fill="#E65100"
+                        fill="#f54a00"
                         fillOpacity={0.3}
                     />
                 </RadarChart>

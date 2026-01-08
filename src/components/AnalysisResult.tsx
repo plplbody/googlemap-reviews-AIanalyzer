@@ -190,7 +190,7 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
                                 onClick={() => toggleSelection(place)}
                                 className={`relative rounded-full text-sm font-bold transition-all duration-300 shadow-sm hover:shadow-md active:scale-95 group ${isSelected
                                     ? 'bg-brand-orange-dark text-white px-4 py-2 border border-brand-orange-dark'
-                                    : 'p-[2px] bg-gradient-to-r from-brand-orange via-rose-300 to-brand-orange hover:from-brand-orange-dark hover:via-rose-400 hover:to-brand-orange-dark'
+                                    : 'p-[2px] bg-gradient-to-r from-orange-400 via-rose-300 to-orange-400 hover:from-brand-orange-dark hover:via-rose-400 hover:to-brand-orange-dark'
                                     }`}
                             >
                                 {isSelected ? (
@@ -408,9 +408,9 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
                                     <Radar
                                         name="Score"
                                         dataKey="A"
-                                        stroke="#f43f5e"
-                                        strokeWidth={3}
-                                        fill="#f43f5e"
+                                        stroke="#f54a00"
+                                        strokeWidth={2}
+                                        fill="#f54a00"
                                         fillOpacity={0.2}
                                     />
                                 </RadarChart>
