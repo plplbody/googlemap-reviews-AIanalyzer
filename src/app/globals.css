@@ -1,9 +1,17 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand: var(--color-orange-600);
+  --color-brand-orange: var(--color-orange-400);
+  --color-brand-orange-light: var(--color-orange-200);
+  --color-brand-orange-dark: var(--color-orange-600);
+
   --color-brand-black: var(--color-slate-600);
+  --color-brand-black-light: var(--color-slate-400);
+  --color-brand-black-dark: var(--color-slate-800);
+
   --color-brand-gray: var(--color-slate-100);
+  --color-brand-gray-light: var(--color-slate-50);
+  --color-brand-gray-dark: var(--color-slate-200);
 }
 
 :root {

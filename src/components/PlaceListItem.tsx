@@ -67,7 +67,7 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
     return (
         <div
             onClick={() => onSelect(place.id)}
-            className={`bg-white rounded-2xl p-6 shadow-sm hover:shadow-xl border transition-all duration-300 cursor-pointer group flex flex-col h-full select-none active:scale-[0.98] active:bg-brand-gray/20 relative ${isSelected ? 'border-brand ring-1 ring-brand' : 'border-brand-gray'}`}
+            className={`bg-white rounded-2xl p-6 shadow-sm hover:shadow-xl border transition-all duration-300 cursor-pointer group flex flex-col h-full select-none active:scale-[0.98] active:bg-brand-gray-light relative ${isSelected ? 'border-brand-orange-dark ring-1 ring-brand-orange-dark' : 'border-brand-gray'}`}
         >
             {/* Image & Header Section */}
             <div className="flex gap-4 mb-4">
@@ -81,18 +81,18 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
                         />
                     </div>
                 ) : (
-                    <div className="relative shrink-0 w-24 h-24 rounded-xl overflow-hidden shadow-sm border border-brand-gray bg-brand-gray/10 flex flex-col items-center justify-center text-brand-black/50">
+                    <div className="relative shrink-0 w-24 h-24 rounded-xl overflow-hidden shadow-sm border border-brand-gray bg-brand-gray-light flex flex-col items-center justify-center text-brand-black-light">
                         <span className="text-[10px] font-bold">No Image</span>
                     </div>
                 )}
                 <div className="flex-grow min-w-0">
                     <div className="flex justify-between items-start">
                         <div className="pr-16">
-                            <h3 className="text-xl font-bold text-brand-black group-hover:text-brand transition-colors line-clamp-2 md:line-clamp-1 mb-1">
+                            <h3 className="text-xl font-bold text-brand-black-dark group-hover:text-brand-orange-dark transition-colors line-clamp-2 md:line-clamp-1 mb-1">
                                 {place.name}
                             </h3>
                             {/* Price & Station Info */}
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-brand-black/80 font-medium">
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-brand-black font-medium">
                                 <div className="flex items-center gap-1">
                                     <span>
                                         {(() => {
@@ -123,11 +123,11 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
                     </div>
                     {/* Google Badge */}
                     <div className="flex items-center gap-2 mt-1">
-                        <div className="flex items-center bg-brand-gray/20 px-2 py-1 rounded-lg border border-brand-gray">
-                            <div className="text-[10px] text-brand-black/50 font-bold mr-1 tracking-wide">Google</div>
+                        <div className="flex items-center bg-brand-gray-light px-2 py-1 rounded-lg border border-brand-gray">
+                            <div className="text-[10px] text-brand-black-light font-bold mr-1 tracking-wide">Google</div>
                             <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400 mr-1" />
-                            <span className="font-bold text-brand-black/80 text-sm">{place.originalRating?.toFixed(1) || '0.0'}</span>
-                            <span className="text-[10px] text-brand-black/50 ml-1">({place.userRatingsTotal || 0})</span>
+                            <span className="font-bold text-brand-black text-sm">{place.originalRating?.toFixed(1) || '0.0'}</span>
+                            <span className="text-[10px] text-brand-black-light ml-1">({place.userRatingsTotal || 0})</span>
                         </div>
                     </div>
                 </div>
@@ -139,7 +139,7 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
             </div>
 
             {/* AI Analysis Score Badge */}
-            <div className="mb-4 p-4 bg-brand-gray/20 rounded-xl border border-brand-gray relative overflow-hidden">
+            <div className="mb-4 p-4 bg-brand-gray-light rounded-xl border border-brand-gray relative overflow-hidden">
                 {isAnalyzed ? (
                     <div className="flex flex-col gap-3">
                         {/* Personalized Score Display (Prominent if active) */}
@@ -147,12 +147,12 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
                             <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                                 <div className="flex items-center justify-between mb-2">
                                     <div>
-                                        <span className="text-base font-bold text-brand block mb-1">あなたとのマッチ度</span>
+                                        <span className="text-base font-bold text-brand-orange-dark block mb-1">あなたとのマッチ度</span>
                                         <div className="flex items-baseline gap-2">
-                                            <span className="text-xl font-black text-brand">
+                                            <span className="text-xl font-black text-brand-orange-dark">
                                                 {yourScore.toFixed(1)}
                                             </span>
-                                            <div className="flex text-brand">
+                                            <div className="flex text-brand-orange-dark">
                                                 {[...Array(5)].map((_, i) => (
                                                     <Star
                                                         key={i}
@@ -164,8 +164,8 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
                                     </div>
                                     {/* Standard AI Score (Secondary) */}
                                     <div className="text-right opacity-75">
-                                        <span className="text-xs font-bold text-brand-black/50 block">AI分析スコア</span>
-                                        <span className="text-lg font-bold text-brand-black/80">{place.trueScore?.toFixed(1)}</span>
+                                        <span className="text-xs font-bold text-brand-black-light block">AI分析スコア</span>
+                                        <span className="text-lg font-bold text-brand-black">{place.trueScore?.toFixed(1)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -173,12 +173,12 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
                             // Standard AI Score Only
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <span className="text-base font-bold text-brand block mb-1">AI分析スコア</span>
+                                    <span className="text-base font-bold text-brand-orange-dark block mb-1">AI分析スコア</span>
                                     <div className="flex items-baseline gap-2">
-                                        <span className="text-xl font-black text-brand">
+                                        <span className="text-xl font-black text-brand-orange-dark">
                                             {place.trueScore?.toFixed(1)}
                                         </span>
-                                        <div className="flex text-brand">
+                                        <div className="flex text-brand-orange-dark">
                                             {[...Array(5)].map((_, i) => (
                                                 <Star
                                                     key={i}
@@ -204,10 +204,10 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
                                     const score = place.axisScores?.[axis.k as keyof typeof place.axisScores] || 0;
                                     return (
                                         <div key={axis.k} className="text-center">
-                                            <div className={`text-[10px] mb-0.5 ${isFocused ? 'text-brand font-bold' : 'text-brand-black/50'}`}>
+                                            <div className={`text-[10px] mb-0.5 ${isFocused ? 'text-brand-orange-dark font-bold' : 'text-brand-black-light'}`}>
                                                 {axis.l}
                                             </div>
-                                            <div className={`text-sm font-bold ${isFocused ? 'text-brand' : 'text-brand-black/80'}`}>
+                                            <div className={`text-sm font-bold ${isFocused ? 'text-brand-orange-dark' : 'text-brand-black'}`}>
                                                 {score.toFixed(1)}
                                             </div>
                                         </div>
@@ -218,10 +218,10 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
 
                         {/* AI Summary */}
                         {place.summary && (
-                            <div className="flex flex-col gap-1.5 mt-3 pt-3 border-t border-brand-gray/50">
+                            <div className="flex flex-col gap-1.5 mt-3 pt-3 border-t border-brand-gray-light">
                                 {(Array.isArray(place.summary) ? place.summary : (place.summary as unknown as string).split('\n')).filter((line: string) => line.trim()).map((line: string, i: number) => (
-                                    <div key={i} className="flex items-start gap-2 text-xs text-brand-black/80">
-                                        <Sparkles className="w-3 h-3 text-brand shrink-0 mt-0.5" />
+                                    <div key={i} className="flex items-start gap-2 text-xs text-brand-black">
+                                        <Sparkles className="w-3 h-3 text-brand-orange-dark shrink-0 mt-0.5" />
                                         <span className="leading-relaxed">{line}</span>
                                     </div>
                                 ))}
@@ -229,25 +229,25 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
                         )}
                     </div>
                 ) : isAnalyzing ? (
-                    <div className="flex items-center justify-center py-4 gap-2 text-brand">
+                    <div className="flex items-center justify-center py-4 gap-2 text-brand-orange-dark">
                         <Loader2 className="w-5 h-5 animate-spin" />
                         <span className="text-sm font-bold">AI分析中...</span>
                     </div>
                 ) : (
-                    <div className="flex items-center justify-center py-4 text-brand-black/50 text-sm">
+                    <div className="flex items-center justify-center py-4 text-brand-black-light text-sm">
                         分析待ち
                     </div>
                 )}
             </div>
 
-            <div className="mt-auto pt-4 flex items-center justify-between text-xs text-brand-black/50 border-t border-brand-gray/20">
+            <div className="mt-auto pt-4 flex items-center justify-between text-xs text-brand-black-light border-t border-brand-gray-light">
                 <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                     {/* Compare Toggle */}
                     <button
                         onClick={() => toggleSelection(place)}
                         className={`relative rounded-full text-xs font-bold transition-all duration-300 shadow-sm hover:shadow-md group ${isSelected
-                            ? 'bg-brand text-white px-3 py-1.5 border border-brand'
-                            : 'p-[1.5px] bg-gradient-to-r from-orange-400 via-rose-300 to-orange-400 hover:from-orange-500 hover:via-rose-400 hover:to-orange-500'
+                            ? 'bg-brand-orange-dark text-white px-3 py-1.5 border border-brand-orange-dark'
+                            : 'p-[1.5px] bg-gradient-to-r from-brand-orange via-rose-300 to-brand-orange hover:from-brand-orange-dark hover:via-rose-400 hover:to-brand-orange-dark'
                             }`}
                     >
                         {isSelected ? (
@@ -257,7 +257,7 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
                             </div>
                         ) : (
                             <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white rounded-full transition-colors w-full h-full">
-                                <Scale className="w-3.5 h-3.5 text-orange-500" />
+                                <Scale className="w-3.5 h-3.5 text-brand-orange-dark" />
                                 <span className="bg-gradient-to-r from-orange-600 to-rose-600 bg-clip-text text-transparent">トレイに追加</span>
                             </div>
                         )}
@@ -269,7 +269,7 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
                     </div>
                 </div>
 
-                <div className="flex items-center gap-1 text-brand font-medium group-hover:translate-x-1 transition-transform">
+                <div className="flex items-center gap-1 text-brand-orange-dark font-medium group-hover:translate-x-1 transition-transform">
                     View Details
                     <ChevronRight className="w-3 h-3" />
                 </div>

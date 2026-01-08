@@ -39,14 +39,14 @@ export function ComparisonTray() {
 
                     {/* Header / Counter */}
                     <div className="hidden sm:flex flex-col">
-                        <span className="text-sm font-bold text-brand-black/80">比較トレイ</span>
-                        <span className="text-xs text-brand-black/50">{selectedPlaces.length} / {currentLimit} 選択中</span>
+                        <span className="text-sm font-bold text-brand-black">比較トレイ</span>
+                        <span className="text-xs text-brand-black-light">{selectedPlaces.length} / {currentLimit} 選択中</span>
                     </div>
 
                     {/* Thumbnails */}
                     <div className="flex-1 flex items-center gap-2 overflow-x-auto py-2 px-2 scrollbar-hide">
                         {selectedPlaces.length === 0 ? (
-                            <div className="flex items-center gap-3 text-brand-black/50 pl-2">
+                            <div className="flex items-center gap-3 text-brand-black-light pl-2">
                                 <span className="text-sm font-medium">店舗を選択してAI分析結果を比較しましょう。（最大3件）</span>
                             </div>
                         ) : (
@@ -59,9 +59,9 @@ export function ComparisonTray() {
                                         >
                                             <X size={14} />
                                         </button>
-                                        <div className="text-xs font-semibold truncate text-brand-black/80">{place.name}</div>
-                                        <div className="flex items-center gap-1 text-[10px] text-brand-black/80">
-                                            <span className="font-mono text-brand">{(place.trueScore && place.trueScore > 0 ? place.trueScore.toFixed(1) : place.originalRating?.toFixed(1) || "-")}</span>
+                                        <div className="text-xs font-semibold truncate text-brand-black">{place.name}</div>
+                                        <div className="flex items-center gap-1 text-[10px] text-brand-black">
+                                            <span className="font-mono text-brand-orange-dark">{(place.trueScore && place.trueScore > 0 ? place.trueScore.toFixed(1) : place.originalRating?.toFixed(1) || "-")}</span>
                                             <span className="truncate">{place.nearestStation || "駅不明"}</span>
                                         </div>
                                     </div>
@@ -71,7 +71,7 @@ export function ComparisonTray() {
 
                         {/* Placeholder for empty slots (Only show if at least 1 item selected, to guide next selection) */}
                         {selectedPlaces.length > 0 && Array.from({ length: Math.max(0, currentLimit - selectedPlaces.length) }).map((_, i) => (
-                            <div key={`empty-${i}`} className="hidden sm:flex shrink-0 w-24 sm:w-32 h-14 border-2 border-dashed border-gray-200 rounded-md items-center justify-center text-brand-black/80 text-xs">
+                            <div key={`empty-${i}`} className="hidden sm:flex shrink-0 w-24 sm:w-32 h-14 border-2 border-dashed border-gray-200 rounded-md items-center justify-center text-brand-black text-xs">
                                 選択可
                             </div>
                         ))}
@@ -82,7 +82,7 @@ export function ComparisonTray() {
                         {selectedPlaces.length > 0 && (
                             <button
                                 onClick={clearSelection}
-                                className="p-2 text-brand-black/80 hover:text-red-500 hover:bg-gray-100 rounded-full transition-colors"
+                                className="p-2 text-brand-black hover:text-red-500 hover:bg-gray-100 rounded-full transition-colors"
                                 title="全てクリア"
                             >
                                 <Trash2 size={20} />
@@ -92,8 +92,8 @@ export function ComparisonTray() {
                             onClick={handleCompare}
                             disabled={selectedPlaces.length < 2 || isComparing}
                             className={`flex items-center text-sm gap-2 px-6 py-3 rounded-full font-bold shadow-lg transition-all ${selectedPlaces.length < 2
-                                ? "bg-brand-gray/10 text-brand-black/50 cursor-not-allowed border border-brand-gray"
-                                : "bg-gradient-to-r from-brand to-brand/80 text-white hover:shadowbrand/30 hover:scale-105 active:scale-95"
+                                ? "bg-brand-gray-light text-brand-black-light cursor-not-allowed border border-brand-gray"
+                                : "bg-gradient-to-r from-brand-orange-dark to-brand-orange-dark/80 text-white hover:shadowbrand/30 hover:scale-105 active:scale-95"
                                 }`}
                         >
                             {isComparing ? (

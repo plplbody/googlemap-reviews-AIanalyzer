@@ -96,11 +96,11 @@ export function ScenePicker({ uid, onSelect, onClose }: ScenePickerProps) {
     return (
         <>
             {/* Picking UI (Toast-like) */}
-            <div ref={pickerRef} className="fixed bottom-14 -right-20 z-[70] w-80 bg-white rounded-2xl shadow-md border border-brand-gray/50 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <div ref={pickerRef} className="fixed bottom-14 -right-20 z-[70] w-80 bg-white rounded-2xl shadow-md border border-brand-gray-light overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
                 <div className="p-4">
                     <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-sm font-bold text-brand-black">利用シーンを選択 (複数可)</h3>
-                        <button onClick={onClose} className="text-brand-black/40 hover:text-brand-black">
+                        <h3 className="text-sm font-bold text-brand-black-dark">利用シーンを選択 (複数可)</h3>
+                        <button onClick={onClose} className="text-brand-black-dark/40 hover:text-brand-black-dark">
                             <X size={16} />
                         </button>
                     </div>
@@ -112,8 +112,8 @@ export function ScenePicker({ uid, onSelect, onClose }: ScenePickerProps) {
                                 key={scene.id}
                                 onClick={() => toggleSelection(scene.id)}
                                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${selectedIds.has(scene.id)
-                                    ? 'bg-orange-100 text-orange-600 border-orange-200'
-                                    : 'bg-slate-100 text-slate-600 border-transparent hover:bg-slate-200'
+                                    ? 'bg-brand-orange-light text-brand-orange-dark border-brand-orange-light'
+                                    : 'bg-brand-gray text-brand-black border-transparent hover:bg-brand-gray-dark'
                                     }`}
                             >
                                 {scene.name}
@@ -122,18 +122,18 @@ export function ScenePicker({ uid, onSelect, onClose }: ScenePickerProps) {
 
                         {/* Custom Scenarios */}
                         {loading ? (
-                            <Loader2 className="w-4 h-4 text-brand-black/30 animate-spin" />
+                            <Loader2 className="w-4 h-4 text-brand-black-light animate-spin" />
                         ) : (
                             customScenarios.map(scene => (
                                 <button
                                     key={scene.id}
                                     onClick={() => toggleSelection(scene.id)}
                                     className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border items-center flex gap-1 ${selectedIds.has(scene.id)
-                                        ? 'bg-orange-100 text-orange-600 border-orange-200'
-                                        : 'bg-orange-50 text-orange-600 border-orange-100 hover:bg-orange-100'
+                                        ? 'bg-brand-orange-light text-brand-orange-dark border-brand-orange-light'
+                                        : 'bg-brand-gray text-brand-black border-transparent hover:bg-brand-gray-dark'
                                         }`}
                                 >
-                                    <span className={`w-1.5 h-1.5 rounded-full inline-block ${selectedIds.has(scene.id) ? 'bg-orange-500' : 'bg-orange-300'}`} />
+                                    <span className={`w-1.5 h-1.5 rounded-full inline-block ${selectedIds.has(scene.id) ? 'bg-brand-orange-dark' : 'bg-brand-orange'}`} />
                                     {scene.name}
                                 </button>
                             ))
@@ -148,14 +148,14 @@ export function ScenePicker({ uid, onSelect, onClose }: ScenePickerProps) {
                                 value={newSceneName}
                                 onChange={(e) => setNewSceneName(e.target.value)}
                                 placeholder="シーン名 (例: 激辛)"
-                                className="flex-1 text-xs px-2 py-1.5 rounded border border-brand-gray focus:outline-none focus:border-orange-400"
+                                className="flex-1 text-xs px-2 py-1.5 rounded border border-brand-gray-dark focus:outline-none focus:border-brand-orange"
                                 onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
                                 autoFocus
                             />
                             <button
                                 onClick={handleCreate}
                                 disabled={createLoading}
-                                className="p-1.5 bg-orange-500 text-white rounded hover:bg-orange-600 disabled:opacity-50"
+                                className="p-1.5 bg-brand-orange text-white rounded hover:bg-brand-orange-dark disabled:opacity-50"
                             >
                                 {createLoading ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
                             </button>
@@ -164,7 +164,7 @@ export function ScenePicker({ uid, onSelect, onClose }: ScenePickerProps) {
                         <div className="flex justify-between items-center mt-2">
                             <button
                                 onClick={() => setIsCreating(true)}
-                                className="flex items-center gap-1 text-xs text-orange-500 hover:text-orange-600 font-medium transition-colors"
+                                className="flex items-center gap-1 text-xs text-brand-orange hover:text-brand-orange-dark font-medium transition-colors"
                             >
                                 <Plus size={14} />
                                 カスタムシーンを作成
@@ -173,7 +173,7 @@ export function ScenePicker({ uid, onSelect, onClose }: ScenePickerProps) {
                             <button
                                 onClick={handleConfirm}
                                 disabled={selectedIds.size === 0}
-                                className="px-4 py-1.5 bg-orange-500 text-white text-xs font-bold rounded-full hover:bg-orange-600 disabled:opacity-50 transition-all shadow-sm"
+                                className="px-4 py-1.5 bg-brand-orange text-white text-xs font-bold rounded-full hover:bg-brand-orange-dark disabled:opacity-50 transition-all shadow-sm"
                             >
                                 決定 ({selectedIds.size})
                             </button>

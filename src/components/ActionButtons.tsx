@@ -137,7 +137,7 @@ export function ActionButtons({ place, uid, onActionComplete }: ActionButtonsPro
 
             {/* Toast Message */}
             {showToast && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 whitespace-nowrap px-4 py-2 bg-brand-black text-white text-xs font-bold rounded-full shadow-lg animate-in fade-in slide-in-from-bottom-2 z-50">
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 whitespace-nowrap px-4 py-2 bg-brand-black-dark text-white text-xs font-bold rounded-full shadow-lg animate-in fade-in slide-in-from-bottom-2 z-50">
                     あなたの好みを学習しました！
                 </div>
             )}
@@ -147,8 +147,8 @@ export function ActionButtons({ place, uid, onActionComplete }: ActionButtonsPro
                 <button
                     onClick={handleSaveClick}
                     className={`p-2 rounded-full border shadow-sm transition-all active:scale-95 ${isSaved
-                        ? 'hover:bg-orange-100 border-orange-100 text-orange-400' // Filled
-                        : 'bg-white border-brand-gray text-brand-black/80 hover:bg-orange-100 hover:text-orange-400'
+                        ? 'hover:bg-orange-100 border-orange-100 text-brand-orange' // Filled
+                        : 'bg-white border-brand-gray text-brand-black hover:bg-orange-100 hover:text-brand-orange'
                         }`}
                     title="保存（マイリスト）"
                 >
@@ -162,8 +162,8 @@ export function ActionButtons({ place, uid, onActionComplete }: ActionButtonsPro
                         onClick={() => handleEvaluationClick('good')}
                         disabled={isLoading}
                         className={`p-2 rounded-full transition-colors flex items-center justify-center ${lastEvaluation === 'good'
-                            ? 'hover:bg-orange-100 border-orange-100 text-orange-400'
-                            : 'bg-white text-brand-black/80 hover:bg-orange-100 hover:text-orange-400'
+                            ? 'hover:bg-orange-100 border-orange-100 text-brand-orange'
+                            : 'bg-white text-brand-black hover:bg-orange-100 hover:text-brand-orange'
                             }`}
                         title="Good / 好み"
                     >
@@ -177,8 +177,8 @@ export function ActionButtons({ place, uid, onActionComplete }: ActionButtonsPro
                         onClick={() => handleEvaluationClick('bad')}
                         disabled={isLoading}
                         className={`p-2 rounded-full transition-colors flex items-center justify-center ${lastEvaluation === 'bad'
-                            ? 'hover:bg-brand-gray text-brand-black'
-                            : 'text-brand-black/80 hover:bg-brand-gray hover:text-brand-black'
+                            ? 'hover:bg-brand-gray text-brand-black-dark'
+                            : 'text-brand-black hover:bg-brand-gray hover:text-brand-black-dark'
                             }`}
                         title="Bad / 合わない"
                     >

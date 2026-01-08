@@ -15,7 +15,7 @@ interface UserPreferenceRadarProps {
 export function UserPreferenceRadar({ preferences, compact = false }: UserPreferenceRadarProps) {
     if (!preferences) {
         return (
-            <div className={`flex flex-col items-center justify-center text-brand-black/50 bg-brand-gray/20 rounded-2xl ${compact ? 'h-32' : 'h-64'}`}>
+            <div className={`flex flex-col items-center justify-center text-brand-black-light bg-brand-gray-light rounded-2xl ${compact ? 'h-32' : 'h-64'}`}>
                 <p className="text-sm font-bold">データ不足</p>
                 <p className="text-xs">まだ学習データがありません</p>
             </div>

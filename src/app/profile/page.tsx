@@ -46,7 +46,7 @@ export default function ProfilePage() {
     if (authLoading || (loading && user)) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-[#FAFAFA]">
-                <Loader2 className="w-8 h-8 text-brand animate-spin" />
+                <Loader2 className="w-8 h-8 text-brand-orange-dark animate-spin" />
             </div>
         );
     }
@@ -63,7 +63,7 @@ export default function ProfilePage() {
                 <div className="mb-6">
                     <button
                         onClick={() => router.back()}
-                        className="flex items-center gap-2 text-brand-black/80 hover:text-brand transition-colors font-medium"
+                        className="flex items-center gap-2 text-brand-black hover:text-brand-orange-dark transition-colors font-medium"
                     >
                         <ArrowLeft className="w-5 h-5" />
                         戻る
@@ -71,7 +71,7 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="flex items-center gap-4 mb-8">
-                    <h1 className="text-3xl font-bold text-brand-black">マイページ</h1>
+                    <h1 className="text-3xl font-bold text-brand-black-dark">マイページ</h1>
                 </div>
 
                 {/* Profile Card */}
@@ -81,20 +81,20 @@ export default function ProfilePage() {
                             {user.photoURL ? (
                                 <img src={user.photoURL} alt={user.displayName || "User"} className="w-full h-full object-cover" />
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-brand-black/50">
+                                <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-brand-black-light">
                                     {user.displayName?.[0] || "U"}
                                 </div>
                             )}
                         </div>
                         <div>
-                            <h2 className="text-2xl font-bold text-brand-black">{user.displayName}</h2>
-                            <p className="text-brand-black/80 text-sm">{user.email}</p>
+                            <h2 className="text-2xl font-bold text-brand-black-dark">{user.displayName}</h2>
+                            <p className="text-brand-black text-sm">{user.email}</p>
                         </div>
                     </div>
 
                     {/* Preference Summary Radar */}
                     <div className="w-full md:w-64 md:ml-auto border-t md:border-t-0 md:border-l border-brand-gray pt-6 md:pt-0 md:pl-6">
-                        <p className="text-xs font-bold text-brand-black/50 mb-2 text-center md:text-left">あなたの好み傾向</p>
+                        <p className="text-xs font-bold text-brand-black-light mb-2 text-center md:text-left">あなたの好み傾向</p>
                         <UserPreferenceRadar preferences={profile?.aiPreferences} compact />
                     </div>
                 </div>
@@ -104,8 +104,8 @@ export default function ProfilePage() {
                     <button
                         onClick={() => setActiveTab('saved')}
                         className={`flex items-center gap-2 px-6 py-3 font-bold text-sm transition-colors border-b-2 ${activeTab === 'saved'
-                            ? 'border-brand text-brand'
-                            : 'border-transparent text-brand-black/80 hover:text-brand-black cursor-pointer'
+                            ? 'border-brand-orange-dark text-brand-orange-dark'
+                            : 'border-transparent text-brand-black hover:text-brand-black-dark cursor-pointer'
                             }`}
                     >
                         <Bookmark className="w-4 h-4" />
@@ -114,8 +114,8 @@ export default function ProfilePage() {
                     <button
                         onClick={() => setActiveTab('good')}
                         className={`flex items-center gap-2 px-6 py-3 font-bold text-sm transition-colors border-b-2 ${activeTab === 'good'
-                            ? 'border-brand text-brand'
-                            : 'border-transparent text-brand-black/80 hover:text-brand-black cursor-pointer'
+                            ? 'border-brand-orange-dark text-brand-orange-dark'
+                            : 'border-transparent text-brand-black hover:text-brand-black-dark cursor-pointer'
                             }`}
                     >
                         <ThumbsUp className="w-4 h-4" />
@@ -124,8 +124,8 @@ export default function ProfilePage() {
                     <button
                         onClick={() => setActiveTab('bad')}
                         className={`flex items-center gap-2 px-6 py-3 font-bold text-sm transition-colors border-b-2 ${activeTab === 'bad'
-                            ? 'border-brand text-brand'
-                            : 'border-transparent text-brand-black/80 hover:text-brand-black cursor-pointer'
+                            ? 'border-brand-orange-dark text-brand-orange-dark'
+                            : 'border-transparent text-brand-black hover:text-brand-black-dark cursor-pointer'
                             }`}
                     >
                         <ThumbsDown className="w-4 h-4" />
@@ -145,11 +145,11 @@ export default function ProfilePage() {
                         ))}
                     </div>
                 ) : (
-                    <div className="text-center py-20 text-brand-black/50">
+                    <div className="text-center py-20 text-brand-black-light">
                         <p>リストは空です</p>
                         <button
                             onClick={() => router.push('/')}
-                            className="mt-4 text-brand font-bold hover:underline"
+                            className="mt-4 text-brand-orange-dark font-bold hover:underline"
                         >
                             お店を探す
                         </button>
