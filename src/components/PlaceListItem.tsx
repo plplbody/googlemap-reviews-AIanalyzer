@@ -109,12 +109,12 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
                         <div className="flex justify-between">
                             {/* AI Score (Left - Prominent) */}
                             <div>
-                                <span className={`text-type-body font-bold block mb-1 ${yourScore >= 4.0 ? 'text-brand-orange-dark' : 'text-brand-black'}`}>AI分析スコア</span>
+                                <span className="text-type-body font-bold block mb-1 text-brand-orange-dark">AI分析スコア</span>
                                 <div className="flex items-center gap-2">
-                                    <span className={`text-type-subtitle ${yourScore >= 4.0 ? 'text-brand-orange-dark' : 'text-brand-blackish'}`}>
+                                    <span className="text-type-subtitle text-brand-orange-dark">
                                         {yourScore?.toFixed(1) || '0.0'}
                                     </span>
-                                    <div className={`pt-1 flex ${yourScore >= 4.0 ? 'text-brand-orange-dark' : 'text-brand-orange'}`}>
+                                    <div className="pt-1 flex text-brand-orange-dark">
                                         {[...Array(5)].map((_, i) => (
                                             <Star
                                                 key={i}

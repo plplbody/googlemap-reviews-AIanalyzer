@@ -96,7 +96,7 @@ export function ScenePicker({ uid, onSelect, onClose }: ScenePickerProps) {
     return (
         <>
             {/* Picking UI (Toast-like) */}
-            <div ref={pickerRef} className="fixed bottom-14 -right-20 z-[70] w-80 bg-white rounded-2xl shadow-md border border-brand-gray-light overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <div ref={pickerRef} className="absolute bottom-14 -right-20 z-[70] w-80 bg-white rounded-2xl shadow-md border border-brand-gray-light overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
                 <div className="p-4">
                     <div className="flex items-center justify-between mb-3">
                         <h3 className="text-sm font-bold text-brand-black-dark">利用シーンを選択 (複数可)</h3>
