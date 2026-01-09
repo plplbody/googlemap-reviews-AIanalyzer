@@ -67,10 +67,11 @@
 | **CSRF** | クロスサイトリクエストフォージェリ | **✅ 対応済 (Safe)** | Next.js Server Actions はデフォルトでCSRF保護（Originチェック等）を含んでいるため安全。 |
 | **SSRF** | サーバーサイドリクエストフォージェリ | **✅ 対応済 (Low Risk)** | ユーザー入力が直接URLとして解釈される箇所はない（APIパラメータとしてのみ使用）。 |
 | **Auth** | ルート保護 (Middleware) | **⚠️ 未対応 (Warning)** | `middleware.ts` が存在せず、全ルートがPublic。現時点の仕様（検索アプリ）では許容されるが、将来管理画面追加時に必須。 |
-| **DoS** | **高額請求攻撃 (Cost DoS)** | **🚨 未対応 (Critical)** | `searchPlaces` 等が認証なしで実行可能。悪意ある大量リクエストでPlaces API/Vertex AI課金が嵩むリスクがある。**最優先対応推奨**。 |
-| **DoS** | **入力文字数制限** | **⚠️ 未対応 (Pending)** | 検索キーワードの長さに制限がない。極端な長文による処理遅延やログ肥大化のリスクがある。 |
-| **Rate Limit** | アクセス頻度制限 | **⚠️ 未対応 (Pending)** | アプリケーションレベルでのレートリミットがない。APIクォータ枯渇攻撃（Wallet Denial of Service）のリスクがある。 |
-| **Logs** | ログへの個人情報出力 | **ℹ️ 留意 (Info)** | `src/server/actions/place.ts` などでユーザー検索語句をログ出力している。個人名等が入力された場合にログに残る可能性がある。 |
+| **DoS** | **高額請求攻撃 (Cost DoS)** | **✅ 対応済 (Fixed)** | `checkRateLimit` によるIPベースの制限(20req/min)と、文字数制限(100chars)を実装済み。 |
+| **DoS** | **入力文字数制限** | **✅ 対応済 (Fixed)** | `place.ts` にて検索クエリを最大100文字に制限。 |
+| **Rate Limit** | アクセス頻度制限 | **✅ 対応済 (Fixed)** | `rate-limit.ts` (Firestore-based Fixed Window Counter) を実装済み。 |
+| **Logs** | ログへの個人情報出力 | **✅ 対応済 (Fixed)** | `sanitizeLog` によりEmail/電話番号パターンをマスクして出力するように修正済み。 |
+| **APIKey** | 公開APIキー漏洩 | **⚠️ 未対応 (Warning)** | googleMap, firebaseの公開APIキーを悪用されない処置が必要。 |
 
 ### 4.2. 対応計画 (Mitigation Plan)
 

@@ -1,21 +1,8 @@
-import { VertexAI } from '@google-cloud/vertexai';
+import { getGenerativeModel, getEmbedding } from './vertex.service';
 import { getFirestore } from '@/lib/firebase/admin';
 import { Place, AnalysisStatus } from '@/types/schema';
 
-// Initialize Vertex AI lazily
-const getModel = () => {
-    const project = process.env.GOOGLE_CLOUD_PROJECT;
-    if (!project) {
-        throw new Error("GOOGLE_CLOUD_PROJECT environment variable is not set.");
-    }
-
-    // Gemini 2.0 Flash is currently available in us-central1
-    const vertexAI = new VertexAI({
-        project: project,
-        location: 'us-central1'
-    });
-    return vertexAI.getGenerativeModel({ model: 'gemini-2.0-flash-001' });
-};
+// Removed local getModel in favor of vertex.service.ts
 
 export async function analyzePlace(placeId: string): Promise<void> {
     console.log(`Starting analysis for place: ${placeId}`);
@@ -102,103 +89,91 @@ export async function analyzePlace(placeId: string): Promise<void> {
 
         // 4. Call Gemini API
         const prompt = `
-      Analyze the following reviews for a restaurant and provide scores (0-5) for Taste, Service, Atmosphere, and Cost.
-      Also calculate a "True Score" (AI Analysis Score / AI分析スコア) which is a weighted average based on sentiment reliability, and a brief summary.
+      Analyze the following reviews for a restaurant and provide scores(0 - 5) for Taste, Service, Atmosphere, and Cost.
+      Also calculate a "True Score"(AI Analysis Score / AI分析スコア) which is a weighted average based on sentiment reliability, and a detailed bullet - point summary.
       
-      **CRITICAL INSTRUCTION: The output JSON content MUST BE WRITTEN IN JAPANESE.**
+      ** CRITICAL INSTRUCTION: The output JSON content MUST BE WRITTEN IN JAPANESE.**
 
-      **Detailed Place Information (Basic Info Tab):**
-      ${detailedInfoText}
+      ** Detailed Place Information(Basic Info Tab):**
+            ${detailedInfoText}
 
-      **IMPORTANT RULES FOR SCORING:**
-      1. **NO PRIOR KNOWLEDGE**: Do NOT use any external knowledge about this brand or place. Rely ONLY on the provided reviews and the "Detailed Place Information".
-      2. **EVIDENCE BASED**: If the reviews do not contain specific information about an axis (e.g., Cost), you MUST assign a score of **3 (Neutral)**. Do not guess.
-      3. **STRUCTURED REVIEWS ONLY**: Focus on the logic and reasoning in the reviews. Ignore emotional outbursts without context.
-      4. **USE DETAILED INFO**: Use the "Detailed Place Information" to refine your scores and usage analysis based on the following logic:
-         
-         | Category | Field | Value | Impact on Axis | Impact on Usage |
-         | :--- | :--- | :--- | :--- | :--- |
-         | **Service** | \`reservable\` | \`true\` | **Service +**: Convenience | **Business/Date +**: Essential. **Group ++**: Vital for organizer. **Solo -**: Hard to enter? |
-         | | \`delivery\` / \`takeout\` | \`true\` | **Service +**: Flexibility | **Date -**: If delivery-focused. |
-         | | \`paymentOptions\` | \`Cash Only\` | **Service -**: Inconvenient | **Business/Group -**: Payment friction. |
-         | | | \`Credit / Digital\` | **Service +**: Convenient | **Business/Group +**: Smooth payment. |
-         | **Food/Drink** | \`servesBreakfast\` | \`true\` | | **Solo +**: Easy entry. |
-         | | \`servesLunch\` | \`true\` | **Cost**: Good Value? | **Solo/Family +**: Casual. **Group +**: Lunch gathering. |
-         | | \`servesDinner\` | \`true\` | | **Date/Business/Group +**: Main use case. |
-         | | \`servesWine\` / \`Beer\` | \`true\` | **Atmosphere +**: Dinner vibe | **Date/Business +**. **Group +**: Drinking party. **Family -**: If Bar-like. |
-         | **Amenities** | \`goodForChildren\` | \`true\` | | **Family ++**: Critical. **Business/Date -**: Noise risk. |
-         | | \`goodForGroups\` | \`true\` | **Atmosphere**: Lively | **Group ++**: Best fit. **Business +**: Team dinner. **Date -**: Not intimate. |
-         | | \`restroom\` | \`true\` | **Service +**: Basic comfort | **Group +**: Essential for long stay. |
-         | **Price** | \`priceLevel\` | \`High\` | **Cost -**: Expensive | **Business/Date +**: Luxurious. **Group -**: Not for casual. |
-         | | | \`Low\` | **Cost +**: Cheap | **Solo/Student +**. **Business/Date -**: Too casual? |
+      ** IMPORTANT RULES FOR SCORING:**
+            1. ** NO PRIOR KNOWLEDGE **: Do NOT use any external knowledge about this brand or place.Rely ONLY on the provided reviews and the "Detailed Place Information".
+      2. ** EVIDENCE BASED **: If the reviews do not contain specific information about an axis(e.g., Cost), you MUST assign a score of ** 3(Neutral) **.Do not guess.
+      3. ** STRUCTURED REVIEWS ONLY **: Focus on the logic and reasoning in the reviews.Ignore emotional outbursts without context.
+      4. ** USE DETAILED INFO **: Use the "Detailed Place Information" to refine your scores and usage analysis.
+         - ** Service **:
+        - 'reservable': Convenient(Business / Date / Group +).
+           - 'delivery' / 'takeout': Flexible.
+           - 'paymentOptions': Cash only is negative for Business.
+         - ** Food / Drink **:
+            - 'servesLunch': Good value / Casual. 
+           - 'servesWine' / 'Beer': Good for Dinner / Date / Group.
+         - ** Amenities **:
+            - 'goodForChildren' / 'serviceFlags.child': Critical for Family.
+           - 'goodForGroups': Good for Group / Business.
+           - 'restroom': Basic comfort.
+           - 'privateRoom': Excellent for Business / Date / Group.
+         - ** Price **:
+            - High: Good for Luxury / Business, bad for Casual.
+           - Low: Good for Solo/Small Group / Student.
 
-         | | | \`Credit / Digital\` | **Service +**: Convenient | **Business/Group +**: Smooth payment. |
-         | **HotPepper** | \`hotpepper.serviceFlags.child\` | \`お子様連れ歓迎\` (or similar) | | **Family ++**: Verified Welcome. |
-         | | \`hotpepper.serviceFlags.privateRoom\` | \`あり\` | **Service +**: Privacy | **Business/Date/Group ++**: Strong verified amenity. |
-         | | \`hotpepper.serviceFlags.parking\` | \`あり\` | | **Family/Group +**: Great for car access. |
-         | | \`hotpepper.catchCopy\` | (Content) | **Taste/Atmosphere**: Use this text as EVIDENCE of store's intent/quality. | |
+      **REQUIRED OUTPUT FIELDS & ANALYSIS:**
 
-         **Strictly apply this logic.** If a field is explicitly \`false\`, do NOT apply the positive impact. If \`undefined\`, ignore.
-
-      Additionally, provide the following detailed insights:
       **CRITICAL: NATURAL LANGUAGE ONLY**
-      - **NEVER** use raw variable names (e.g., "goodForChildren", "reservable", "true", "false") in your JSON output strings.
-      - **ALWAYS** paraphrase into natural Japanese.
-      - Example: "goodForChildren: false" -> "子供連れには向かない可能性があります" or "子供向けの設備は明記されていません".
-      - Example: "reservable: true" -> "予約可能です".
-      - Example: "goodForGroups: Lively" -> "団体利用に適した活気ある雰囲気".
-      - This applies to \`usageSummary\`, \`gapReason\`, \`summary\`, and \`axisAnalysis\` (pros/cons).
-
-      1. "gapReason": Explain why the "AI分析スコア" (True Score) might differ from a typical average rating. Use the term "AI分析スコア" in your explanation, NOT "True Score".
-      2. "axisAnalysis": For EACH axis (taste, service, atmosphere, cost), provide:
-         - "pros": A list of positive points (strings).
-         - "cons": A list of negative points (strings).
-         - "summary": A brief summary string.
-
-      Evaluate the suitability (0-5) for the following scenarios based on the reviews AND detailed info:
-      - Business (接待・会食): Is it quiet? Good service? Private rooms? Reservable?
-      - Date (デート): Romantic? Good ambiance? Serves wine?
-      - Solo (お一人様): Counter seats? Easy to enter alone?
-      - Family (家族連れ): Kids friendly? Spacious? Good for children?
-      - Group (団体利用): Reservable? Good for groups? Spacious?
-
-      Also provide a "usageSummary" (string): A brief explanation of why these usage scores were assigned, BASED STRICTLY ON THE REVIEWS AND DETAILED INFO.
-      - Do NOT include your own opinion or negative inferences if not mentioned in the text.
-      - If a specific scenario is not mentioned, do not comment on it.
-      - Example: "Has private rooms suitable for business. Counter seats available." (Do NOT say "Not suitable for families" if reviews don't say so).
+      - **ALWAYS** paraphrase into natural Japanese (e.g., "reservable: true" -> "予約可能です").
       
-      Reviews:
+      1. **"gapReason"**:
+         - Explain why the "AI分析スコア" (True Score) might differ from a typical average rating.
+         - Use the term "AI分析スコア" in your explanation, NOT "True Score".
+
+      2. **"axisAnalysis"**:
+         - For EACH axis (taste, service, atmosphere, cost), provide:
+           - "pros": positive points list (strings).
+           - "cons": negative points list (strings).
+           - "summary": brief summary string.
+
+      3. **"usageScores"**:
+         - Evaluate suitability (0-5) for:
+           - **Business (接待・会食)**: Quiet? Good service? Private rooms? Reservable?
+           - **Date (デート)**: Romantic? Good ambiance? Wine?
+           - **Solo (少人数/お一人様)**: Good for 1-2 people? Counter or small tables?
+           - **Family (家族連れ)**: Kids friendly? Spacious?
+           - **Group (団体利用)**: Reservable? Spacious?
+
+      4. **"usageSummary"**:
+         - Brief explanation of scores based *strictly* on reviews/info.
+         - Do NOT include your own opinion or negative inferences if not mentioned in the text.
+      
+      5. **"summary"**:
+         - A concise summary of the place's characteristics.
+         - **FORMAT**: JSON ARRAY of strings. Provide 3 to 5 key points.
+         - Example: ["絶品の寿司がリーズナブルに楽しめる", "落ち着いた雰囲気でデートに最適", "予約必須の人気店"]
+
+      **REVIEWS:**
       ${reviewsText}
       
       Output JSON format:
+        \`\`\`json
       {
         "trueScore": number,
-        "axisScores": {
-          "taste": number,
-          "service": number,
-          "atmosphere": number,
-          "cost": number
-        },
-        "usageScores": {
-          "business": number,
-          "date": number,
-          "solo": number,
-          "family": number,
-          "group": number
-        },
+        "axisScores": { "taste": number, "service": number, "atmosphere": number, "cost": number },
+        "usageScores": { "business": number, "date": number, "solo": number, "family": number, "group": number },
         "usageSummary": "string",
-        "summary": "string",
+        "summary": ["string", "...", "string"],
         "gapReason": "string",
         "axisAnalysis": {
           "taste": { "pros": ["string"], "cons": ["string"], "summary": "string" },
           "service": { "pros": ["string"], "cons": ["string"], "summary": "string" },
           "atmosphere": { "pros": ["string"], "cons": ["string"], "summary": "string" },
           "cost": { "pros": ["string"], "cons": ["string"], "summary": "string" }
-        }
+        },
+
       }
+      \`\`\`
     `;
 
-        const result = await getModel().generateContent(prompt);
+        const result = await getGenerativeModel().generateContent(prompt);
         const response = result.response;
         const text = response.candidates?.[0].content.parts[0].text;
 
@@ -218,12 +193,42 @@ export async function analyzePlace(placeId: string): Promise<void> {
 
         const analysis = JSON.parse(jsonStr);
 
-        // 4. Save results to Firestore
+        // ---------------------------------------------------------
+        // 5. Generate Embedding Source Text & Vector (Vertex AI)
+        // ---------------------------------------------------------
+
+        // Helper to safe join
+        const safeJoin = (arr: string[] | undefined) => Array.isArray(arr) ? arr.join(", ") : "";
+
+        // Construct natural language representation
+        const areaStr = placeData.address || "不明なエリア";
+        const genreStr = (placeData.detailedInfo?.diningOptions?.servesDinner ? "ディナーが楽しめる店" : "飲食店");
+        const priceStr = placeData.priceLevel || "不明";
+
+        // Collect pros as features
+        const features = [
+            ...(analysis.axisAnalysis?.taste?.pros || []),
+            ...(analysis.axisAnalysis?.atmosphere?.pros || []),
+            ...(analysis.axisAnalysis?.service?.pros || [])
+        ].slice(0, 5).join(", ");
+
+        const embeddingSourceText = `店名:${placeData.name}。エリア:${areaStr}。ジャンル:${genreStr}。価格帯:${priceStr}。特徴:${features}。AI評価要約:${analysis.summary}`;
+
+        console.log(`Generating embedding for: ${embeddingSourceText.substring(0, 50)}...`);
+        // Throw if fails, do not catch
+        const embeddingVector = await getEmbedding(embeddingSourceText);
+
+        // 6. Save results to Firestore
         await getFirestore().collection('places').doc(placeId).update({
             status: 'completed',
             trueScore: analysis.trueScore,
             axisScores: analysis.axisScores,
             usageScores: analysis.usageScores,
+
+            // New Embedding Fields
+            embeddingSourceText: embeddingSourceText,
+            embeddingVector: embeddingVector,
+
             usageSummary: analysis.usageSummary || "",
             summary: analysis.summary,
             gapReason: analysis.gapReason || "",

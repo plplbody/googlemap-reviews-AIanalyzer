@@ -1,24 +1,29 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { doc, onSnapshot } from "firebase/firestore";
 import { firestore } from "@/lib/firebase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import SearchInput from "@/components/ui/SearchInput";
 import AnalysisResult from "@/components/AnalysisResult";
 
-import PlaceList from "@/components/PlaceList";
-import { Place } from "@/types/schema";
+import Header from "@/components/Header";
+import PlaceList from '@/components/PlaceList';
+import { ComparisonTray } from '@/components/ComparisonTray';
+import { SelectionButton } from '@/components/ui/SelectionButton';
+import { Place, UsageScores } from "@/types/schema";
+import { UserProfile } from "@/types/user";
 import {
   searchPlaces,
-  searchAndAnalyze,
+  getPlaceDetails,
   PlaceSearchResult,
 } from "@/server/actions/place";
+import { getPersonalizedScores, PersonalizedScore } from "@/server/actions/personalize";
+import { useSearch } from "@/contexts/SearchContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimePlaces } from "@/hooks/useRealtimePlaces";
-import { Utensils, Award, Sparkles, TrendingUp, ArrowLeft, Heart, ListFilter, Star, Menu, X } from "lucide-react";
-
-
+import { Utensils, Award, Sparkles, TrendingUp, ArrowLeft, Heart, Star, User as UserIcon, Loader2, MapPin } from "lucide-react";
+import { UserPreferenceRadar } from "@/components/UserPreferenceRadar";
 
 type ViewState = "HOME" | "LIST" | "DETAIL";
 
@@ -31,40 +36,105 @@ function HomeContent() {
   const query = searchParams.get("q") || "";
   const placeId = searchParams.get("id");
 
-  const [searchResults, setSearchResults] = useState<PlaceSearchResult[]>([]);
-  const [nextPageToken, setNextPageToken] = useState<string | undefined>(undefined);
+  // Global Search State
+  const { cachedResults, cachedNextPageToken, cachedQuery, setCache, appendResults } = useSearch();
+
+  // Local UI State
   const [place, setPlace] = useState<Place | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  // Auth for Personalization
+  const { user, profile, signInWithGoogle } = useAuth();
+  const [pScores, setPScores] = useState<Record<string, PersonalizedScore>>({});
+  const [effectivePrefs, setEffectivePrefs] = useState<UserProfile['aiPreferences'] | undefined>(undefined);
+
+  // Auto Personalize Toggle
+  // Default to true if user is logged in, false otherwise
+  const [isAutoPersonalize, setIsAutoPersonalize] = useState(false);
+
+  // Sync AutoPersonalize with User state
+  useEffect(() => {
+    if (user) {
+      setIsAutoPersonalize(true);
+    } else {
+      setIsAutoPersonalize(false);
+    }
+  }, [user]);
+
   // Sort State
-  // Sort State
-  const [sortBy, setSortBy] = useState<'match' | 'ai' | 'google'>('ai');
-  // Mobile Menu & Auth State
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user, signInWithGoogle, signOut } = useAuth();
+  const [sortBy, setSortBy] = useState<'ai' | 'google'>('ai');
 
   // Initialize state from URL on first load
   const [focusedAxes, setFocusedAxes] = useState<string[]>(() => {
     const focusParam = searchParams.get("focus");
-    return focusParam ? focusParam.split(",") : [];
+    return focusParam ? focusParam.split(",").filter(Boolean) : [];
   });
+
   const [focusedScenes, setFocusedScenes] = useState<string[]>(() => {
-    const sceneParam = searchParams.get("scenes");
-    return sceneParam ? sceneParam.split(",") : [];
+    const scenesParam = searchParams.get("scenes");
+    return scenesParam ? scenesParam.split(",").filter(Boolean) : [];
   });
 
   // Realtime Data Hook
-  const { places: realtimePlaces } = useRealtimePlaces(searchResults.map(p => p.id));
+  const { places: realtimePlaces } = useRealtimePlaces(cachedResults.map(p => p.id));
+
+  // Fetch Personalized Scores (Refactored for reuse)
+  const fetchScores = useCallback(async (ids: string[], mode: 'auto' | 'manual', axes: string[], scenes: string[]) => {
+    try {
+      if (ids.length === 0) return;
+      const scores = await getPersonalizedScores(ids, user?.uid, {
+        mode,
+        focusedAxes: axes,
+        scenarioIds: scenes
+      });
+      setPScores(scores);
+
+      // Extract effective preferences from the first result (they are context-based, so identical for all places in this batch)
+      const firstResult = Object.values(scores)[0];
+      if (firstResult?.effectivePreferences) {
+        setEffectivePrefs(firstResult.effectivePreferences);
+      } else {
+        setEffectivePrefs(undefined); // Fallback/Reset
+      }
+
+    } catch (e) {
+      console.error("Failed to fetch personalized scores", e);
+    }
+  }, [user?.uid]);
+
+  useEffect(() => {
+    if (cachedResults.length > 0) {
+      // Always fetch scores based on current mode/selection
+      const mode = isAutoPersonalize ? 'auto' : 'manual';
+      fetchScores(cachedResults.map(p => p.id), mode, focusedAxes, focusedScenes);
+    }
+  }, [cachedResults, fetchScores, isAutoPersonalize, focusedAxes, focusedScenes]);
+
+  // Handler for action completion (e.g. Save/Good/Bad)
+  const [isScoreOutdated, setIsScoreOutdated] = useState(false);
+
+  // Handler for action completion (e.g. Save/Good/Bad)
+  const handleActionComplete = async () => {
+    // Mark scores as outdated but do NOT automatically refetch to prevent reordering
+    setIsScoreOutdated(true);
+  };
+
+  const handleRecalculate = async () => {
+    if (cachedResults.length > 0) {
+      const mode = isAutoPersonalize ? 'auto' : 'manual';
+      await fetchScores(cachedResults.map(p => p.id), mode, focusedAxes, focusedScenes);
+      setIsScoreOutdated(false);
+    }
+  };
+
 
   // Merge & Sort Logic
   const sortedPlaces = (() => {
     // 1. Merge
-    const merged = searchResults.map(initial => {
+    const merged = cachedResults.map(initial => {
       const real = realtimePlaces[initial.id];
-      if (real) return real;
 
-      // Fallback if not yet in Firestore
-      return {
+      const base = real || {
         id: initial.id,
         name: initial.name,
         originalRating: initial.rating,
@@ -72,53 +142,25 @@ function HomeContent() {
         address: initial.vicinity,
         status: 'pending', // Default
       } as Place;
+
+      // Inject Personalized Score for UI if needed (though Place type doesn't have it explicitly, we look it up from pScores)
+      // We can attach it to a temporary object or just use pScores in sort
+      return base;
     });
 
-    // 2. Score Helper
-    const getMatchScore = (p: Place) => {
-      if (!p.axisScores || (focusedAxes.length === 0 && focusedScenes.length === 0)) return -1;
-      const scores = p.axisScores;
-      const usage = p.usageScores || {};
-
-      const axesMap: Record<string, number> = {
-        'taste': scores.taste, 'service': scores.service, 'atmosphere': scores.atmosphere, 'cost': scores.cost
-      };
-      let total = 0, weight = 0;
-
-      // Standard Axes
-      ['taste', 'service', 'atmosphere', 'cost'].forEach(ax => {
-        const w = focusedAxes.includes(ax) ? 3 : 1;
-        total += (axesMap[ax] || 0) * w;
-        weight += w;
-      });
-
-      // Usage Scenarios
-      ['business', 'date', 'solo', 'family', 'group'].forEach(scene => {
-        if (focusedScenes.includes(scene)) {
-          const score = usage[scene as keyof typeof usage] || 0;
-          const w = 3;
-          total += score * w;
-          weight += w;
-        }
-      });
-
-      return total / weight;
-    };
-
-    // 3. Sort
+    // 2. Sort
     return merged.sort((a, b) => {
       let valA = 0, valB = 0;
-      if (sortBy === 'match') {
-        valA = getMatchScore(a);
-        valB = getMatchScore(b);
-        // Fallback to AI score if match scores are equal (or both -1)
-        if (Math.abs(valA - valB) < 0.1) {
+      if (sortBy === 'ai') {
+        // Use Server Calculated Final Score exclusively
+        valA = pScores[a.id]?.finalScore ?? (a.trueScore || 0);
+        valB = pScores[b.id]?.finalScore ?? (b.trueScore || 0);
+
+        // Tie-breaker
+        if (Math.abs(valA - valB) < 0.01) {
           valA = a.trueScore ?? -999;
           valB = b.trueScore ?? -999;
         }
-      } else if (sortBy === 'ai') {
-        valA = a.trueScore ?? -999;
-        valB = b.trueScore ?? -999;
       } else { // google
         valA = a.originalRating ?? 0;
         valB = b.originalRating ?? 0;
@@ -127,15 +169,15 @@ function HomeContent() {
     });
   })();
 
-  // Update Sort when Focused Axes/Scenes change
+
+
+  // Update Sort when Focused Axes/Scenes change (Manual Mode) or Auto Mode
+  // Force "Recommended" (AI) view on interaction to show relevant results immediately.
   useEffect(() => {
-    if (focusedAxes.length > 0 || focusedScenes.length > 0) {
-      setSortBy('match');
-    } else {
-      // If we were sorting by match and axes/scenes become empty, fallback to AI
-      if (sortBy === 'match') setSortBy('ai');
+    if (focusedAxes.length > 0 || focusedScenes.length > 0 || isAutoPersonalize) {
+      setSortBy('ai');
     }
-  }, [focusedAxes.length, focusedScenes.length]);
+  }, [focusedAxes.length, focusedScenes.length, isAutoPersonalize]);
 
   const handleAxisToggle = (axisId: string) => {
     let newAxes: string[];
@@ -196,42 +238,70 @@ function HomeContent() {
     });
   }, [searchParams]);
 
+  // Move handleLoadMore here to be accessible by fetchData
+  const handleLoadMore = useCallback(async (tokenOverride?: string) => {
+    const token = tokenOverride || cachedNextPageToken;
+    // Note: checking cachedNextPageToken in closure might be stale if called immediately?
+    // But tokenOverride solves this.
+    if (!token || loadingMore) return;
+
+    setLoadingMore(true);
+    try {
+      const response = await searchPlaces(query, token);
+      appendResults(response.places, response.nextPageToken);
+    } catch (error) {
+      console.error("Failed to load more", error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [cachedNextPageToken, loadingMore, query, appendResults]);
+
   // URLパラメータの変更を監視してデータを取得
   useEffect(() => {
     const fetchData = async () => {
       if (viewState === "LIST" && query) {
+        // Cache Hit Check: If query matches cached query and we have results, skip
+        if (query === cachedQuery && cachedResults.length > 0) {
+          return;
+        }
+
         setLoading(true);
-        // Reset results when query changes (handled by router but safe to ensure)
         try {
           const response = await searchPlaces(query);
-          setSearchResults(response.places);
-          setNextPageToken(response.nextPageToken);
+          setCache(query, response.places, response.nextPageToken);
+          setLoading(false); // Immediate interaction allowed
+
+          // Chain 2nd page load
+          if (response.nextPageToken) {
+            handleLoadMore(response.nextPageToken);
+          }
         } catch (error) {
           console.error(error);
-        } finally {
           setLoading(false);
         }
       } else if (viewState === "DETAIL" && placeId) {
         setLoading(true);
         try {
-          // 詳細表示の場合は、まず分析/取得アクションを呼ぶ（必要なら）
-          // ただし、Firestoreのリスナーでデータ同期するため、ここではIDセットのみで良い場合もあるが、
-          // 初回分析トリガーのために searchAndAnalyze を呼ぶ必要がある
-          await searchAndAnalyze(placeId);
+          await getPlaceDetails(placeId);
         } catch (error) {
           console.error(error);
         } finally {
           setLoading(false);
         }
       } else if (viewState === "HOME") {
-        setSearchResults([]);
-        setNextPageToken(undefined);
         setPlace(null);
       }
     };
 
     fetchData();
-  }, [viewState, query, placeId]);
+  }, [viewState, query, placeId, cachedQuery, cachedResults.length, setLoading, setCache, searchPlaces, handleLoadMore, getPlaceDetails, setPlace]);
+
+  // Scroll to top when switching to DETAIL view
+  useEffect(() => {
+    if (viewState === "DETAIL") {
+      window.scrollTo(0, 0);
+    }
+  }, [viewState]);
 
   // 詳細表示時のリアルタイムリスナー
   useEffect(() => {
@@ -253,20 +323,6 @@ function HomeContent() {
     return () => unsubscribe();
   }, [viewState, placeId]);
 
-  const handleLoadMore = async () => {
-    if (!nextPageToken || loadingMore) return;
-
-    setLoadingMore(true);
-    try {
-      const response = await searchPlaces(query, nextPageToken);
-      setSearchResults(prev => [...prev, ...response.places]);
-      setNextPageToken(response.nextPageToken);
-    } catch (error) {
-      console.error("Failed to load more", error);
-    } finally {
-      setLoadingMore(false);
-    }
-  };
 
   // 検索開始時の処理
   const handleSearchStart = () => {
@@ -310,89 +366,13 @@ function HomeContent() {
 
 
   return (
-    <main className="min-h-screen bg-[#FAFAFA] text-[#1A1A1A] font-serif selection:bg-[#E65100]/20">
-      {/* ナビゲーションバー */}
-      <nav className={`absolute top-0 w-full z-50 p-6 flex justify-between items-center transition-colors duration-300 ${viewState === 'HOME' ? 'text-white' : 'text-slate-900'}`}>
-        <div
-          className="text-2xl font-bold tracking-widest cursor-pointer"
-          onClick={resetHome}
-        >
-          AI Concierge <span className="text-xs font-normal opacity-80 ml-1">for グルメ</span>
-        </div>
-        <div className="hidden md:flex gap-8 text-sm font-medium tracking-wide items-center">
-          <span className="cursor-pointer hover:text-[#E65100] transition-colors">
-            COLLECTIONS
-          </span>
-          <span className="cursor-pointer hover:text-[#E65100] transition-colors">
-            ABOUT
-          </span>
-          {user ? (
-            <div className="flex items-center gap-4">
-              <span className="text-xs opacity-80">{user.displayName}</span>
-              <button
-                onClick={signOut}
-                className="px-4 py-2 rounded-full border border-[#E65100] text-[#E65100] hover:bg-[#E65100] hover:text-white transition-all text-xs font-bold"
-              >
-                LOGOUT
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={signInWithGoogle}
-              className="cursor-pointer hover:text-[#E65100] transition-colors font-bold"
-            >
-              LOGIN
-            </button>
-          )}
-        </div>
-
-        {/* Mobile Menu Toggle */}
-        <button
-          className="md:hidden p-2"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        >
-          {isMobileMenuOpen ? (
-            <X className="w-6 h-6" />
-          ) : (
-            <Menu className="w-6 h-6" />
-          )}
-        </button>
-
-        {/* Mobile Menu Overlay */}
-        {isMobileMenuOpen && (
-          <div className="absolute top-full left-0 w-full bg-white/95 backdrop-blur-md shadow-lg p-6 flex flex-col gap-6 md:hidden animate-in slide-in-from-top-2 duration-200">
-            <span className="text-slate-900 font-bold tracking-wider cursor-pointer hover:text-[#E65100]" onClick={() => setIsMobileMenuOpen(false)}>
-              COLLECTIONS
-            </span>
-            <span className="text-slate-900 font-bold tracking-wider cursor-pointer hover:text-[#E65100]" onClick={() => setIsMobileMenuOpen(false)}>
-              ABOUT
-            </span>
-            {user ? (
-              <div className="flex flex-col gap-4 border-t pt-4 border-slate-200">
-                <span className="text-sm text-slate-500">Login as {user.displayName}</span>
-                <button
-                  onClick={() => { signOut(); setIsMobileMenuOpen(false); }}
-                  className="text-left text-[#E65100] font-bold tracking-wider cursor-pointer"
-                >
-                  LOGOUT
-                </button>
-              </div>
-            ) : (
-              <span
-                className="text-slate-900 font-bold tracking-wider cursor-pointer hover:text-[#E65100]"
-                onClick={() => { signInWithGoogle(); setIsMobileMenuOpen(false); }}
-              >
-                LOGIN
-              </span>
-            )}
-          </div>
-        )}
-      </nav>
+    <main className="min-h-screen bg-[#FAFAFA] text-[#1A1A1A] font-serif selection:bg-brand-orange-dark/20">
+      <Header viewState={viewState} onResetHome={resetHome} />
 
       {/* ヒーローセクション（ホーム画面でのみ表示） */}
       {viewState === "HOME" && (
         <>
-          <section className="relative h-[80vh] w-full flex flex-col items-center justify-center">
+          <section className="relative pt-32 pb-16 w-full flex flex-col items-center justify-center">
             {/* 背景画像 */}
             <div className="absolute inset-0 z-0">
               <img
@@ -405,17 +385,17 @@ function HomeContent() {
             {/* メインコンテンツ */}
             <div className="relative z-10 w-full max-w-4xl px-6 text-center flex flex-col items-center gap-8">
               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-                <h1 className="text-3xl md:text-6xl font-bold text-white tracking-tight text-shadow-lg leading-tight">
+                <h1 className="text-3xl md:text-5xl font-bold text-white tracking-tight text-shadow-lg leading-tight">
                   あなた専属の、<br />
-                  <span className="text-[#E65100]">AIグルメコンシェルジュ</span>
+                  <span className="text-brand-orange-dark">AIグルメコンシェルジュ</span>
                 </h1>
-                <p className="text-gray-200 text-lg md:text-xl font-sans font-light tracking-wide max-w-2xl mx-auto leading-relaxed">
-                  口コミをAIが分析し、客観的に評価。<br className="hidden md:block" />
-                  あなたの好みや価値観に合わせて、<span className="text-white font-medium">最適なお店</span>をご提案します。
+                <p className="text-brand-gray text-type-body tracking-wide max-w-2xl mx-auto leading-relaxed">
+                  口コミをAIが分析し、客観的に評価。<br />
+                  あなたの好みに合わせて、<span className="text-white font-medium">最適なお店</span>をご提案します。
                 </p>
               </div>
 
-              <div className="w-full max-w-2xl animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
+              <div className="mt-8 w-full max-w-2xl animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
                 <SearchInput
                   onSearchStart={handleSearchStart}
                   onSearchComplete={handleSearchComplete}
@@ -425,40 +405,34 @@ function HomeContent() {
           </section>
 
           {/* サービスの価値提案（メリット） */}
-          <section className="py-24 bg-white">
+          <section className="py-8 bg-white">
             <div className="container mx-auto px-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
+              <div className="grid grid-cols-[repeat(3,minmax(0,300px))] gap-4 text-center justify-center">
                 <div className="flex flex-col items-center gap-4 group">
-                  <div className="w-16 h-16 rounded-full bg-[#FAFAFA] flex items-center justify-center group-hover:bg-[#E65100]/10 transition-colors">
-                    <Sparkles className="w-8 h-8 text-[#E65100]" />
+                  <div className="w-8 h-8 md:w-16 md:h-16 rounded-full bg-brand-gray-light flex items-center justify-center">
+                    <Sparkles className="w-8 h-8 text-brand-orange-dark" />
                   </div>
-                  <h3 className="text-xl font-bold">客観的なAI評価</h3>
-                  <p className="text-gray-500 font-sans text-sm leading-relaxed">
-                    口コミを公平に分析。<br />
-                    サクラやノイズを排除し、<br />
-                    お店の本来の実力を数値化します。
+                  <h3 className="text-type-body font-bold text-brand-black">客観的なAI評価</h3>
+                  <p className="text-type-memo text-brand-black-light leading-relaxed">
+                    AIが口コミを公平に分析します。
                   </p>
                 </div>
                 <div className="flex flex-col items-center gap-4 group">
-                  <div className="w-16 h-16 rounded-full bg-[#FAFAFA] flex items-center justify-center group-hover:bg-[#E65100]/10 transition-colors">
+                  <div className="w-8 h-8 md:w-16 md:h-16 rounded-full bg-brand-gray-light flex items-center justify-center">
                     <Heart className="w-8 h-8 text-rose-500" />
                   </div>
-                  <h3 className="text-xl font-bold">あなただけのマッチ度</h3>
-                  <p className="text-gray-500 font-sans text-sm leading-relaxed">
-                    味、雰囲気、サービスの好みや<br />
-                    利用シーンに合わせて、<br />
-                    あなたとの相性を瞬時に計算。
+                  <h3 className="text-type-body font-bold text-brand-black">あなただけのマッチ度</h3>
+                  <p className="text-type-memo text-brand-black-light leading-relaxed">
+                    AIがあなたの好みと相性を瞬時に計算します。
                   </p>
                 </div>
                 <div className="flex flex-col items-center gap-4 group">
-                  <div className="w-16 h-16 rounded-full bg-[#FAFAFA] flex items-center justify-center group-hover:bg-[#E65100]/10 transition-colors">
+                  <div className="w-8 h-8 md:w-16 md:h-16 rounded-full bg-brand-gray-light flex items-center justify-center">
                     <Award className="w-8 h-8 text-[#C5A059]" />
                   </div>
-                  <h3 className="text-xl font-bold">失敗しないお店選び</h3>
-                  <p className="text-gray-500 font-sans text-sm leading-relaxed">
-                    ビジネスからデートまで。<br />
-                    熟練のコンシェルジュのように、<br />
-                    その日の目的に最適解を導きます。
+                  <h3 className="text-type-body font-bold text-brand-black">失敗しないお店選び</h3>
+                  <p className="text-type-memo text-brand-black-light leading-relaxed">
+                    AIが利用シーンに合わせて最適なお店を提案します。
                   </p>
                 </div>
               </div>
@@ -471,12 +445,12 @@ function HomeContent() {
 
       {/* リスト表示（検索結果） */}
       {viewState === "LIST" && (
-        <div className="pt-32 pb-24 min-h-screen bg-slate-50">
+        <div className="pt-32 pb-24 min-h-screen bg-brand-gray-light">
           <div className="container mx-auto px-6 mb-8">
             <div className="flex flex-col gap-6">
               <button
                 onClick={resetHome}
-                className="flex items-center gap-2 text-slate-500 hover:text-[#E65100] transition-colors w-fit font-medium"
+                className="flex items-center gap-2 text-brand-black hover:text-brand-orange-dark transition-colors w-fit font-medium"
               >
                 <ArrowLeft className="w-5 h-5" />
                 ホーム
@@ -490,202 +464,271 @@ function HomeContent() {
 
               {/* Filter Selection UI */}
               <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-top-4 duration-500 w-full max-w-4xl mx-auto">
-                <p className="text-sm text-slate-500 font-medium text-center">重視するポイントや利用シーンを選択してください。あなたへのマッチ度を計算します。</p>
 
-                <div className="flex flex-col gap-8">
-                  {/* 1. Axes */}
-                  <div className="flex flex-col gap-3">
-                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider text-center">重視するポイント <span className="text-xs font-normal opacity-70">(複数選択可)</span></h3>
-                    <div className="flex flex-wrap gap-2 justify-center">
-                      {[
-                        { id: 'taste', label: '味・料理', icon: Utensils },
-                        { id: 'service', label: '接客・サービス', icon: Heart },
-                        { id: 'atmosphere', label: '雰囲気・空間', icon: Sparkles },
-                        { id: 'cost', label: 'コスパ', icon: TrendingUp },
-                      ].map((axis) => {
-                        const isSelected = focusedAxes.includes(axis.id);
-                        return (
+                {/* Auto Personalize Toggle */}
+                <div className="w-full border border-brand-gray pl-6 pr-6 rounded-xl bg-white/50 overflow-hidden shadow-sm">
+                  <div className="pt-5">
+                    <p className={"text-type-body font-semibold text-brand-black text-center mb-6"}>あなたが重視するポイントに合わせて、スコアを最適化します。</p>
+
+                    {/* Tab Navigation */}
+                    <div className="flex justify-center mb-0 border-b border-brand-gray w-full">
+                      <div className="flex gap-8 relative">
+                        <button
+                          onClick={() => setIsAutoPersonalize(false)}
+                          className={`pb-3 px-2 text-type-button transition-all relative ${!isAutoPersonalize ? 'text-brand-orange-dark' : 'text-brand-black-light hover:text-brand-black'}`}
+                        >
+                          手動選択
+                          {!isAutoPersonalize && (
+                            <div className="absolute bottom-0 left-0 w-full h-0.5 bg-brand-orange-dark rounded-t-full" />
+                          )}
+                        </button>
+
+                        <div className="flex items-center gap-3 relative">
+
                           <button
-                            key={axis.id}
-                            onClick={() => handleAxisToggle(axis.id)}
-                            className={`
-                                flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all duration-300 border
-                                ${isSelected
-                                ? 'bg-[#E65100] text-white border-[#E65100] shadow-md transform scale-105'
-                                : 'bg-white text-slate-600 border-slate-200 hover:border-[#E65100] hover:text-[#E65100]'
+                            onClick={() => {
+                              if (!user) {
+                                signInWithGoogle();
+                                return;
                               }
-                                `}
+                              setIsAutoPersonalize(true);
+                            }}
+                            className={`pb-3 px-2 text-type-button transition-all relative flex items-center gap-2 ${isAutoPersonalize ? 'text-brand-orange-dark' : 'text-brand-black-light hover:text-brand-orange'}`}
                           >
-                            <axis.icon className="w-4 h-4" />
-                            {axis.label}
+                            <Sparkles className={`w-3.5 h-3.5`} />
+                            {!user ? "ログインして傾向を自動反映" : "傾向を自動反映"}
+                            {isAutoPersonalize && (
+                              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-brand-orange-dark rounded-t-full" />
+                            )}
                           </button>
-                        );
-                      })}
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  {/* 2. Scenarios */}
-                  <div className="flex flex-col gap-3">
-                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider text-center">利用シーン <span className="text-xs font-normal opacity-70">(複数選択可)</span></h3>
-                    <div className="flex flex-wrap gap-2 justify-center">
-                      {[
-                        { id: 'business', label: 'ビジネス' },
-                        { id: 'date', label: 'デート' },
-                        { id: 'solo', label: 'お一人様' },
-                        { id: 'family', label: 'ファミリー' },
-                        { id: 'group', label: '団体' },
-                      ].map((scene) => {
-                        const isSelected = focusedScenes.includes(scene.id);
-                        return (
-                          <button
-                            key={scene.id}
-                            onClick={() => handleSceneToggle(scene.id)}
-                            className={`
-                                    flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-bold transition-all duration-300 border
-                                    ${isSelected
-                                ? 'bg-rose-600 text-white border-rose-600 shadow-md transform scale-105'
-                                : 'bg-white text-slate-500 border-slate-200 hover:border-rose-600 hover:text-rose-600'
-                              }
-                                    `}
-                          >
-                            {scene.label}
-                          </button>
-                        );
-                      })}
-                    </div>
+                  <div>
+                    {!isAutoPersonalize ? (
+                      <div className="flex flex-col p-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                        {/* 1. Axes */}
+                        <div className="flex flex-col gap-3">
+                          <h3 className="text-type-memo font-bold text-brand-black-light uppercase tracking-wider text-center">重視するポイント</h3>
+                          <div className="flex flex-wrap gap-2 justify-center">
+                            {[
+                              { id: 'taste', label: '味', icon: Utensils },
+                              { id: 'service', label: '接客', icon: Heart },
+                              { id: 'atmosphere', label: '雰囲気', icon: Sparkles },
+                              { id: 'cost', label: 'コスパ', icon: TrendingUp },
+                            ].map((axis) => (
+                              <SelectionButton
+                                key={axis.id}
+                                isSelected={focusedAxes.includes(axis.id)}
+                                onClick={() => handleAxisToggle(axis.id)}
+                                label={axis.label}
+                                icon={axis.icon}
+                                variant="chip"
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* 2. Manual Scenarios */}
+                        <div className="flex flex-col gap-3 mt-4 border-t border-brand-gray pt-4">
+                          <h3 className="text-type-memo font-bold text-brand-black-light uppercase tracking-wider text-center">利用シーン</h3>
+                          <div className="flex flex-wrap gap-2 justify-center">
+                            {[
+                              { id: 'solo', label: '少人数' },
+                              { id: 'group', label: '団体' },
+                              { id: 'date', label: 'デート' },
+                              { id: 'business', label: 'ビジネス' },
+                              { id: 'family', label: 'ファミリー' }
+                            ].map((scene) => (
+                              <SelectionButton
+                                key={scene.id}
+                                isSelected={focusedScenes.includes(scene.id)}
+                                onClick={() => handleSceneToggle(scene.id)}
+                                label={scene.label}
+                                variant="chip"
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-300 w-full mb-6">
+                        {/* Chart Container */}
+                        <p className="text-type-memo text-brand-black mt-4 text-center">
+                          あなたの過去の評価(Good/Bad)から傾向を分析しています。
+                        </p>
+                        <div className="w-full max-w-sm">
+                          {/* Use effectivePrefs if available, otherwise global profile */}
+                          <UserPreferenceRadar preferences={effectivePrefs || profile?.aiPreferences} compact />
+                        </div>
+
+                        {/* 3. Auto Scenarios */}
+                        <div className="flex flex-col gap-3 mt-4 w-full px-6">
+                          <h3 className="text-type-memo font-bold text-brand-black-light uppercase tracking-wider text-center">今の気分・シーン (Vector Boost)</h3>
+                          <div className="flex flex-wrap gap-2 justify-center">
+                            {[
+                              { id: 'solo', label: '少人数' },
+                              { id: 'group', label: '団体' },
+                              { id: 'date', label: 'デート' },
+                              { id: 'business', label: 'ビジネス' },
+                              { id: 'family', label: 'ファミリー' }
+
+                            ].map((scene) => (
+                              <SelectionButton
+                                key={scene.id}
+                                isSelected={focusedScenes.includes(scene.id)}
+                                onClick={() => handleSceneToggle(scene.id)} // Shared Handler
+                                label={scene.label}
+                                variant="chip"
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        <p className="text-type-memo text-brand-black-light mt-6 mb-2 text-center">
+                          💡 評価(Good/Bad)をしてAIの精度を上げましょう
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
+
+                {/* 2. Global Scenarios (Removed from here) */}
+
+
               </div>
 
               {/* Sort Controls */}
               <div className="flex flex-col items-center mt-6 gap-2">
-                <span className="text-sm text-slate-500 font-medium">並び替え</span>
-                <div className="bg-white p-1 rounded-full border border-slate-200 flex shadow-sm">
-                  <button
-                    onClick={() => setSortBy('match')}
-                    disabled={focusedAxes.length === 0 && focusedScenes.length === 0}
-                    className={`
-                            px-4 py-1.5 rounded-full text-sm font-bold transition-all flex items-center gap-1
-                            ${sortBy === 'match'
-                        ? 'bg-[#E65100] text-white shadow-sm'
-                        : (focusedAxes.length === 0 && focusedScenes.length === 0) ? 'text-slate-300 cursor-not-allowed' : 'text-slate-500 hover:bg-slate-50 hover:text-[#E65100]'
-                      }
-                          `}
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    マッチ度
-                  </button>
-                  <button
+                <span className="text-type-body font-semibold text-brand-black">並び替え</span>
+                <div className="bg-white p-1 rounded-full border border-brand-gray flex shadow-sm">
+                  <SelectionButton
+                    isSelected={sortBy === 'ai'}
                     onClick={() => setSortBy('ai')}
-                    className={`
-                            px-4 py-1.5 rounded-full text-sm font-bold transition-all flex items-center gap-1
-                            ${sortBy === 'ai'
-                        ? 'bg-[#E65100] text-white shadow-sm'
-                        : 'text-slate-500 hover:bg-slate-50 hover:text-[#E65100]'
-                      }
-                          `}
-                  >
-                    AI分析スコア
-                  </button>
-                  <button
+                    label="AI分析スコア"
+                    icon={Sparkles}
+                    variant="segment"
+                  />
+                  <SelectionButton
+                    isSelected={sortBy === 'google'}
                     onClick={() => setSortBy('google')}
-                    className={`
-                            px-4 py-1.5 rounded-full text-sm font-bold transition-all flex items-center gap-1
-                            ${sortBy === 'google'
-                        ? 'bg-[#E65100] text-white shadow-sm'
-                        : 'text-slate-500 hover:bg-slate-50 hover:text-[#E65100]'
-                      }
-                          `}
-                  >
-                    <Star className="w-3.5 h-3.5 fill-current" />
-                    Google評価
-                  </button>
+                    label="Google評価"
+                    icon={Star}
+                    variant="segment"
+                  />
                 </div>
               </div>
-
             </div>
           </div>
-          <PlaceList
-            places={sortedPlaces}
-            onSelect={handlePlaceSelect}
-            onLoadMore={handleLoadMore}
-            hasMore={!!nextPageToken}
-            loadingMore={loadingMore}
-            focusedAxes={focusedAxes}
-            focusedScenes={focusedScenes}
-          />
+          <div className="flex-1 w-full min-w-0">
+            {loading && sortedPlaces.length === 0 ? (
+              <div className="py-20 flex flex-col items-center justify-center text-brand-black animate-pulse bg-white/50 rounded-xl border border-dashed border-brand-gray">
+                <MapPin className="mb-4 w-10 h-10 text-brand-black-light" />
+                <p className="font-bold text-lg">Googleマップから最新情報を検索中...</p>
+                <p className="text-sm mt-2">※AI分析はバックグラウンドで行われます</p>
+              </div>
+            ) : (
+              <PlaceList
+                places={sortedPlaces}
+                onSelect={handlePlaceSelect}
+                onLoadMore={() => handleLoadMore()}
+                hasMore={!!cachedNextPageToken}
+                loadingMore={loadingMore}
+                focusedAxes={focusedAxes}
+                focusedScenes={focusedScenes}
+                personalizedScores={pScores}
+                onActionComplete={handleActionComplete}
+                isScoreOutdated={isScoreOutdated}
+                onRecalculate={handleRecalculate}
+                query={cachedQuery}
+              />
+            )}
+          </div>
         </div>
-      )}
+      )
+      }
 
       {/* 詳細表示（分析結果） */}
-      {viewState === "DETAIL" && place && (
-        <div className="pt-32 pb-24 container mx-auto px-6 animate-in fade-in duration-500">
-          <div className="flex justify-between items-center mb-6">
-            <button
-              onClick={() => {
-                const params = new URLSearchParams();
-                params.set("view", "LIST");
-                if (query) params.set("q", query);
-                if (focusedAxes.length > 0) params.set("focus", focusedAxes.join(","));
-                if (focusedScenes.length > 0) params.set("scenes", focusedScenes.join(","));
-                router.push(`/?${params.toString()}`);
-              }}
-              className="flex items-center gap-2 text-slate-500 hover:text-[#E65100] transition-colors font-medium"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              一覧
-            </button>
+      {
+        viewState === "DETAIL" && place && (
+          <div className="pt-32 pb-24 container mx-auto px-6 animate-in fade-in duration-500">
+            <div className="flex justify-between items-center mb-6">
+              <button
+                onClick={() => {
+                  const from = searchParams.get("from");
+                  if (from === 'profile') {
+                    router.back();
+                    return;
+                  }
+                  const params = new URLSearchParams();
+                  params.set("view", "LIST");
+                  if (query) params.set("q", query);
+                  if (focusedAxes.length > 0) params.set("focus", focusedAxes.join(","));
+                  if (focusedScenes.length > 0) params.set("scenes", focusedScenes.join(","));
+                  router.push(`/?${params.toString()}`);
+                }}
+                className="flex items-center gap-2 text-brand-black hover:text-brand-orange-dark transition-colors font-medium"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                戻る
+              </button>
 
-            <div className="flex gap-4">
-              {(() => {
-                const currentIndex = sortedPlaces.findIndex(p => p.id === place.id);
-                const prevPlace = currentIndex !== -1 && currentIndex > 0
-                  ? sortedPlaces[currentIndex - 1]
-                  : null;
+              <div className="flex gap-4">
+                {(() => {
+                  const currentIndex = sortedPlaces.findIndex(p => p.id === place.id);
+                  const prevPlace = currentIndex !== -1 && currentIndex > 0
+                    ? sortedPlaces[currentIndex - 1]
+                    : null;
 
-                if (!prevPlace) return null;
+                  if (!prevPlace) return null;
 
-                return (
-                  <button
-                    onClick={() => handlePlaceSelect(prevPlace.id)}
-                    className="flex items-center gap-2 text-slate-500 hover:text-[#E65100] transition-colors font-medium"
-                  >
-                    <ArrowLeft className="w-5 h-5" />
-                    前の店
-                  </button>
-                );
-              })()}
+                  return (
+                    <button
+                      onClick={() => handlePlaceSelect(prevPlace.id)}
+                      className="flex items-center gap-2 text-brand-black hover:text-brand-orange-dark transition-colors font-medium"
+                    >
+                      <ArrowLeft className="w-5 h-5" />
+                      前の店
+                    </button>
+                  );
+                })()}
 
-              {(() => {
-                const currentIndex = sortedPlaces.findIndex(p => p.id === place.id);
-                const nextPlace = currentIndex !== -1 && currentIndex < sortedPlaces.length - 1
-                  ? sortedPlaces[currentIndex + 1]
-                  : null;
+                {(() => {
+                  const currentIndex = sortedPlaces.findIndex(p => p.id === place.id);
+                  const nextPlace = currentIndex !== -1 && currentIndex < sortedPlaces.length - 1
+                    ? sortedPlaces[currentIndex + 1]
+                    : null;
 
-                if (!nextPlace) return null;
+                  if (!nextPlace) return null;
 
-                return (
-                  <button
-                    onClick={() => handlePlaceSelect(nextPlace.id)}
-                    className="flex items-center gap-2 text-slate-500 hover:text-[#E65100] transition-colors font-medium"
-                  >
-                    次の店
-                    <ArrowLeft className="w-5 h-5 rotate-180" />
-                  </button>
-                );
-              })()}
+                  return (
+                    <button
+                      onClick={() => handlePlaceSelect(nextPlace.id)}
+                      className="flex items-center gap-2 text-brand-black hover:text-brand-orange-dark transition-colors font-medium"
+                    >
+                      次の店
+                      <ArrowLeft className="w-5 h-5 rotate-180" />
+                    </button>
+                  );
+                })()}
+              </div>
             </div>
+            <AnalysisResult
+              place={place}
+              focusedAxes={focusedAxes}
+              focusedScenes={focusedScenes}
+              onToggleAxis={handleAxisToggle}
+              onToggleScene={handleSceneToggle}
+              isAutoMode={isAutoPersonalize}
+              personalScore={pScores[place.id]}
+            />
           </div>
-          <AnalysisResult
-            place={place}
-            focusedAxes={focusedAxes}
-            focusedScenes={focusedScenes}
-            onToggleAxis={handleAxisToggle}
-            onToggleScene={handleSceneToggle}
-          />
-        </div>
-      )}
-    </main>
+        )}
+      {(viewState === "LIST" || viewState === "DETAIL") && <ComparisonTray focusedScenes={focusedScenes} />}
+    </main >
   );
 }
 
@@ -693,7 +736,7 @@ export default function Home() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-[#FAFAFA]">
-        <div className="animate-pulse text-[#E65100]">Loading...</div>
+        <div className="animate-pulse text-brand-orange-dark">Loading...</div>
       </div>
     }>
       <HomeContent />

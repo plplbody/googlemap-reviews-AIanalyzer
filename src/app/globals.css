@@ -1,5 +1,19 @@
 @import "tailwindcss";
 
+@theme {
+  --color-brand-orange: var(--color-orange-400);
+  --color-brand-orange-light: var(--color-orange-200);
+  --color-brand-orange-dark: var(--color-orange-600);
+
+  --color-brand-black: var(--color-slate-600);
+  --color-brand-black-light: var(--color-slate-400);
+  --color-brand-black-dark: var(--color-slate-800);
+
+  --color-brand-gray: var(--color-slate-100);
+  --color-brand-gray-light: var(--color-slate-50);
+  --color-brand-gray-dark: var(--color-slate-200);
+}
+
 :root {
   --foreground-rgb: 26, 26, 26;
   /* Dark Slate */
@@ -13,10 +27,7 @@
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-start-rgb));
   font-family: 'Noto Serif JP', serif;
-  /* Default to serif for elegance */
 }
 
 /* Custom Utilities */
@@ -33,4 +44,32 @@ body {
 
 .text-shadow-lg {
   text-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+@layer components {
+
+  /* 最も視界に入れたい */
+  .text-type-title {
+    @apply text-2xl md:text-3xl font-bold;
+  }
+
+  /* カード内のタイトルなど */
+  .text-type-subtitle {
+    @apply text-lg md:text-xl font-semibold;
+  }
+
+  /* 読ませたい */
+  .text-type-body {
+    @apply text-sm md:text-base;
+  }
+
+  /* ボタン */
+  .text-type-button {
+    @apply text-sm md:text-base font-bold;
+  }
+
+  /* 視界に入れたく参考情報 */
+  .text-type-memo {
+    @apply text-xs md:text-sm;
+  }
 }
