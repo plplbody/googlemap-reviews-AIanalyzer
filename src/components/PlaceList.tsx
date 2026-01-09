@@ -3,6 +3,7 @@
 import { Place } from '@/types/schema';
 import PlaceListItem from './PlaceListItem';
 import { RefreshCw } from 'lucide-react';
+import { PersonalizedScore } from '@/server/actions/personalize';
 
 interface PlaceListProps {
     places: Place[];
@@ -12,19 +13,20 @@ interface PlaceListProps {
     loadingMore: boolean;
     focusedAxes?: string[];
     focusedScenes?: string[];
-    personalizedScores?: Record<string, { finalScore: number }>;
+    personalizedScores?: Record<string, PersonalizedScore>;
     onActionComplete?: () => void;
     isScoreOutdated?: boolean;
     onRecalculate?: () => void;
+    query: string;
 }
 
 // 検索結果のリストを表示するコンポーネント
-export default function PlaceList({ places, onSelect, onLoadMore, hasMore, loadingMore, focusedAxes, focusedScenes, personalizedScores, onActionComplete, isScoreOutdated, onRecalculate }: PlaceListProps) {
+export default function PlaceList({ places, onSelect, onLoadMore, hasMore, loadingMore, focusedAxes, focusedScenes, personalizedScores, onActionComplete, isScoreOutdated, onRecalculate, query }: PlaceListProps) {
     return (
         <div className="w-full max-w-6xl mx-auto px-4 py-8">
             <div className="mb-6 flex items-end justify-between">
                 <div>
-                    <h2 className="text-2xl font-bold text-brand-black-dark mb-1">検索結果</h2>
+                    <h2 className="text-type-subtitle font-bold text-brand-black mb-1">「{query}」の検索結果</h2>
                 </div>
                 {/* Manual Recalculate Button (Replaces Load More at top) */}
                 {isScoreOutdated && onRecalculate && (
@@ -45,7 +47,9 @@ export default function PlaceList({ places, onSelect, onLoadMore, hasMore, loadi
                         onSelect={onSelect}
                         focusedAxes={focusedAxes}
                         focusedScenes={focusedScenes}
-                        personalizedScore={personalizedScores?.[place.id]?.finalScore}
+                        personalizedScore={
+                            personalizedScores?.[place.id]?.finalScore ?? place.trueScore
+                        }
                         onActionComplete={onActionComplete}
                     />
                 ))}

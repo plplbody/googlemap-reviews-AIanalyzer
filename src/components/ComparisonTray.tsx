@@ -8,7 +8,11 @@ import { VerdictModal } from '@/components/VerdictModal';
 
 import { useAuth } from "@/contexts/AuthContext";
 
-export function ComparisonTray() {
+interface ComparisonTrayProps {
+    focusedScenes?: string[];
+}
+
+export function ComparisonTray({ focusedScenes }: ComparisonTrayProps) {
     const { user, signInWithGoogle } = useAuth();
     const { selectedPlaces, toggleSelection, clearSelection, currentLimit, isComparing, setIsComparing, setVerdict } = useComparison();
 
@@ -21,8 +25,8 @@ export function ComparisonTray() {
         setIsComparing(true);
         try {
             const ids = selectedPlaces.map(p => p.id);
-            // TODO: Extract user preferences if available (for now default)
-            const result = await comparePlaces(ids, user?.uid);
+            // Pass user UID and the currently actived scenes
+            const result = await comparePlaces(ids, user?.uid, focusedScenes);
             setVerdict(result);
         } catch (error: any) {
             console.error("Comparison failed:", error);

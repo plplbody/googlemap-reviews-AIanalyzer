@@ -33,7 +33,12 @@ function cosineSimilarity(vecA: number[], vecB: number[]): number {
     return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
-export async function comparePlaces(placeIds: string[], userId?: string): Promise<ComparisonResult> {
+// Vector Helpers (Duplicated from personalize.ts for self-containment)
+const vecScale = (v: number[], s: number) => v.map(val => val * s);
+const vecAdd = (v1: number[], v2: number[]) => v1.map((val, i) => val + (v2[i] || 0));
+const vecZero = (dim: number) => new Array(dim).fill(0);
+
+export async function comparePlaces(placeIds: string[], userId?: string, scenarioIds?: string[]): Promise<ComparisonResult> {
     if (placeIds.length < 2) {
         throw new Error("比較には最低2店舗必要です");
     }
@@ -43,12 +48,48 @@ export async function comparePlaces(placeIds: string[], userId?: string): Promis
     const refs = placeIds.map(id => db.collection('places').doc(id));
 
     // Also fetch user profile if userId provided
-    let userVector: number[] | null = null;
+    let targetVector: number[] | null = null;
     if (userId) {
-        const userDoc = await db.collection('users').doc(userId).get();
+        const userRef = db.collection('users').doc(userId);
+        const userDoc = await userRef.get();
+
         if (userDoc.exists) {
             const userData = userDoc.data();
-            userVector = userData?.preferenceVector || null;
+            const globalVector = userData?.preferenceVector || []; // Base Vector
+
+            // Scenario Logic
+            if (scenarioIds && scenarioIds.length > 0 && globalVector.length > 0) {
+                const scenarios: number[][] = [];
+                for (const scId of scenarioIds) {
+                    const scDoc = await userRef.collection('scenarios').doc(scId).get();
+                    if (scDoc.exists) {
+                        const data = scDoc.data();
+                        if (data && data.preferenceVector && data.preferenceVector.length === globalVector.length) {
+                            scenarios.push(data.preferenceVector);
+                        }
+                    }
+                }
+
+                if (scenarios.length > 0) {
+                    // Average Scenarios
+                    const dim = globalVector.length;
+                    let combinedScene = vecZero(dim);
+                    scenarios.forEach(v => {
+                        combinedScene = vecAdd(combinedScene, v);
+                    });
+                    combinedScene = vecScale(combinedScene, 1.0 / scenarios.length);
+
+                    // Combine: (Global * 0.3) + (Scenario * 0.7)
+                    targetVector = vecAdd(
+                        vecScale(globalVector, 0.3),
+                        vecScale(combinedScene, 0.7)
+                    );
+                } else {
+                    targetVector = globalVector.length > 0 ? globalVector : null;
+                }
+            } else {
+                targetVector = globalVector.length > 0 ? globalVector : null;
+            }
         }
     }
 
@@ -66,12 +107,14 @@ export async function comparePlaces(placeIds: string[], userId?: string): Promis
     // 2. Calculate Similarity & Rank
     const rankedPlaces = places.map(p => {
         let score = 0;
-        // If user vector and place vector exist, calc cosine similarity
-        if (userVector && p.embeddingVector) {
-            score = cosineSimilarity(userVector, p.embeddingVector);
+        // If target vector and place vector exist, calc cosine similarity
+        if (targetVector && p.embeddingVector) {
+            const sim = cosineSimilarity(targetVector, p.embeddingVector);
+            // Map -1.0~1.0 to 0.0~1.0 (for % display)
+            score = (sim + 1.0) / 2.0;
         } else {
-            // Fallback: Use place's trueScore or rating if no vector match possible
-            score = p.trueScore || p.originalRating || 0;
+            // Fallback: Use place's trueScore (0-5) mapped to 0-1
+            score = (p.trueScore || p.originalRating || 0) / 5.0;
         }
         return { place: p, score };
     }).sort((a, b) => b.score - a.score); // Descending
@@ -86,7 +129,7 @@ export async function comparePlaces(placeIds: string[], userId?: string): Promis
 
     const result: ComparisonResult = {
         winnerId: winner.place.id,
-        reason: `あなたとのマッチ度: ${userVector ? (winner.score * 100).toFixed(0) + '%' : 'データ不足のためスコア順'}`,
+        reason: `あなたとのマッチ度: ${targetVector ? (winner.score * 100).toFixed(0) + '%' : 'データ不足のためスコア順'}`,
         scores,
         matrix: {}
     };

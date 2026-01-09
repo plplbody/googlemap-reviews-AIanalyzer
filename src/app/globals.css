@@ -46,23 +46,30 @@ body {
   text-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
-/* Simplified Semantic Scale (3 Levels) */
-.text-type-title {
-  @apply text-2xl md:text-3xl font-bold;
-}
+@layer components {
 
-.text-type-subtitle {
-  @apply text-lg md:text-xl font-semibold;
-}
+  /* 最も視界に入れたい */
+  .text-type-title {
+    @apply text-2xl md:text-3xl font-bold;
+  }
 
-.text-type-body {
-  @apply text-sm md:text-base;
-}
+  /* カード内のタイトルなど */
+  .text-type-subtitle {
+    @apply text-lg md:text-xl font-semibold;
+  }
 
-.text-type-button {
-  @apply text-sm md:text-base font-bold;
-}
+  /* 読ませたい */
+  .text-type-body {
+    @apply text-sm md:text-base;
+  }
 
-.text-type-memo {
-  @apply text-xs md:text-sm;
+  /* ボタン */
+  .text-type-button {
+    @apply text-sm md:text-base font-bold;
+  }
+
+  /* 視界に入れたく参考情報 */
+  .text-type-memo {
+    @apply text-xs md:text-sm;
+  }
 }

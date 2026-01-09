@@ -52,8 +52,8 @@ export function VerdictModal() {
                             </p>
                         </div>
 
-                        <p className="text-xs text-brand-black text-center my-3">
-                            💡 評価(Good/Bad)でAI精度UP
+                        <p className="text-type-memo  text-brand-black-light text-center my-3">
+                            💡 評価(Good/Bad)をしてAIの精度を上げましょう
                         </p>
                     </div>
 

@@ -11,7 +11,7 @@ import Header from "@/components/Header";
 import PlaceList from '@/components/PlaceList';
 import { ComparisonTray } from '@/components/ComparisonTray';
 import { SelectionButton } from '@/components/ui/SelectionButton';
-import { Place } from "@/types/schema";
+import { Place, UsageScores } from "@/types/schema";
 import {
   searchPlaces,
   getPlaceDetails,
@@ -21,7 +21,7 @@ import { getPersonalizedScores, PersonalizedScore } from "@/server/actions/perso
 import { useSearch } from "@/contexts/SearchContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimePlaces } from "@/hooks/useRealtimePlaces";
-import { Utensils, Award, Sparkles, TrendingUp, ArrowLeft, Heart, ListFilter, Star, User as UserIcon, Loader2, MapPin } from "lucide-react";
+import { Utensils, Award, Sparkles, TrendingUp, ArrowLeft, Heart, Star, User as UserIcon, Loader2, MapPin } from "lucide-react";
 import { UserPreferenceRadar } from "@/components/UserPreferenceRadar";
 
 type ViewState = "HOME" | "LIST" | "DETAIL";
@@ -60,7 +60,7 @@ function HomeContent() {
   }, [user]);
 
   // Sort State
-  const [sortBy, setSortBy] = useState<'match' | 'ai' | 'google'>('ai');
+  const [sortBy, setSortBy] = useState<'ai' | 'google'>('ai');
 
   // Initialize state from URL on first load
   const [focusedAxes, setFocusedAxes] = useState<string[]>(() => {
@@ -77,10 +77,14 @@ function HomeContent() {
   const { places: realtimePlaces } = useRealtimePlaces(cachedResults.map(p => p.id));
 
   // Fetch Personalized Scores (Refactored for reuse)
-  const fetchScores = useCallback(async (ids: string[]) => {
+  const fetchScores = useCallback(async (ids: string[], mode: 'auto' | 'manual', axes: string[], scenes: string[]) => {
     try {
       if (ids.length === 0) return;
-      const scores = await getPersonalizedScores(ids, user?.uid);
+      const scores = await getPersonalizedScores(ids, user?.uid, {
+        mode,
+        focusedAxes: axes,
+        scenarioIds: scenes
+      });
       setPScores(scores);
     } catch (e) {
       console.error("Failed to fetch personalized scores", e);
@@ -89,9 +93,11 @@ function HomeContent() {
 
   useEffect(() => {
     if (cachedResults.length > 0) {
-      fetchScores(cachedResults.map(p => p.id));
+      // Always fetch scores based on current mode/selection
+      const mode = isAutoPersonalize ? 'auto' : 'manual';
+      fetchScores(cachedResults.map(p => p.id), mode, focusedAxes, focusedScenes);
     }
-  }, [cachedResults, fetchScores]);
+  }, [cachedResults, fetchScores, isAutoPersonalize, focusedAxes, focusedScenes]);
 
   // Handler for action completion (e.g. Save/Good/Bad)
   const [isScoreOutdated, setIsScoreOutdated] = useState(false);
@@ -104,7 +110,8 @@ function HomeContent() {
 
   const handleRecalculate = async () => {
     if (cachedResults.length > 0) {
-      await fetchScores(cachedResults.map(p => p.id));
+      const mode = isAutoPersonalize ? 'auto' : 'manual';
+      await fetchScores(cachedResults.map(p => p.id), mode, focusedAxes, focusedScenes);
       setIsScoreOutdated(false);
     }
   };
@@ -115,7 +122,6 @@ function HomeContent() {
     // 1. Merge
     const merged = cachedResults.map(initial => {
       const real = realtimePlaces[initial.id];
-      const pScore = pScores[initial.id];
 
       const base = real || {
         id: initial.id,
@@ -131,73 +137,19 @@ function HomeContent() {
       return base;
     });
 
-    // 2. Score Helper
-    const getMatchScore = (p: Place) => {
-      // IF Auto Mode: Use Server Calculated Score (which uses profile prefs)
-      if (isAutoPersonalize && user) {
-        // Ideally pScores should reflect the specific user's preference
-        // But currently getPersonalizedScores uses the user's ID to fetch the profile on server?
-        // Yes: getPersonalizedScores(ids, user.uid).
-        // So pScores ALREADY accounts for the user's profile if user.uid was passed.
-        // BUT, we might want to ensure we are relying on that heavily.
-        // In 'manual' mode, we override it with client-side calc if axes are selected.
-
-        const personal = pScores[p.id];
-        if (personal && personal.isPersonalized) {
-          return personal.finalScore;
-        }
-        return p.trueScore || 0;
-      }
-
-      // Manual Mode Logic (Legacy/Client-side Override)
-      // Priority 2: Client-side Axis Match (Legacy/Fallback)
-      // Priority 2: Client-side Axis Match (Legacy/Fallback)
-      if (focusedAxes.length === 0) return -1;
-
-      const scores = p.axisScores;
-      const usage = p.usageScores || {};
-
-      const axesMap: Record<string, number> = {
-        'taste': scores?.taste || 0, 'service': scores?.service || 0, 'atmosphere': scores?.atmosphere || 0, 'cost': scores?.cost || 0
-      };
-      let total = 0, weight = 0;
-
-      // Standard Axes
-      ['taste', 'service', 'atmosphere', 'cost'].forEach(ax => {
-        const w = focusedAxes.includes(ax) ? 3 : 1;
-        total += (axesMap[ax] || 0) * w;
-        weight += w;
-      });
-
-      // Usage Scenarios Scoring REMOVED (Now used for filtering)
-      /*
-      ['business', 'date', 'solo', 'family', 'group'].forEach(scene => {
-        if (focusedScenes.includes(scene)) {
-          const score = usage[scene as keyof typeof usage] || 0;
-          const w = 3;
-          total += score * w;
-          weight += w;
-        }
-      });
-      */
-
-      return total / weight;
-    };
-
-    // 3. Sort
+    // 2. Sort
     return merged.sort((a, b) => {
       let valA = 0, valB = 0;
-      if (sortBy === 'match') {
-        valA = getMatchScore(a);
-        valB = getMatchScore(b);
-        // Fallback to AI score if match scores are equal (or both -1)
-        if (Math.abs(valA - valB) < 0.1) {
+      if (sortBy === 'ai') {
+        // Use Server Calculated Final Score exclusively
+        valA = pScores[a.id]?.finalScore ?? (a.trueScore || 0);
+        valB = pScores[b.id]?.finalScore ?? (b.trueScore || 0);
+
+        // Tie-breaker
+        if (Math.abs(valA - valB) < 0.01) {
           valA = a.trueScore ?? -999;
           valB = b.trueScore ?? -999;
         }
-      } else if (sortBy === 'ai') {
-        valA = a.trueScore ?? -999;
-        valB = b.trueScore ?? -999;
       } else { // google
         valA = a.originalRating ?? 0;
         valB = b.originalRating ?? 0;
@@ -206,43 +158,15 @@ function HomeContent() {
     });
   })();
 
-  const filteredPlaces = sortedPlaces.filter(place => {
-    // Scene Filter: If scenes are selected, place must match AT LEAST ONE selected scene with a decent score.
-    if (focusedScenes.length === 0) return true;
 
-    // Check if any of the selected scenes has a score >= 3 (standard threshold for "good for X")
-    // If usageScores is missing, it doesn't match.
-    if (!place.usageScores) return false;
 
-    return focusedScenes.some(scene => {
-      const score = place.usageScores?.[scene as keyof typeof place.usageScores] || 0;
-      return score >= 4;
-    });
-  });
-
-  // Update Sort when Focused Axes change (Manual Mode) -> Scenarios no longer affect sort directly
+  // Update Sort when Focused Axes/Scenes change (Manual Mode) or Auto Mode
+  // Force "Recommended" (AI) view on interaction to show relevant results immediately.
   useEffect(() => {
-    if (!isAutoPersonalize) {
-      if (focusedAxes.length > 0) {
-        setSortBy('match');
-      } else {
-        // If we were sorting by match and axes become empty, fallback to AI
-        if (sortBy === 'match') setSortBy('ai');
-      }
+    if (focusedAxes.length > 0 || focusedScenes.length > 0 || isAutoPersonalize) {
+      setSortBy('ai');
     }
-  }, [focusedAxes.length, isAutoPersonalize]);
-
-  // Update Sort when Auto Mode is toggled
-  useEffect(() => {
-    if (isAutoPersonalize) {
-      setSortBy('match');
-    } else {
-      // When switching back to manual, if no axes selected, go to AI
-      if (focusedAxes.length === 0) {
-        setSortBy('ai');
-      }
-    }
-  }, [isAutoPersonalize]);
+  }, [focusedAxes.length, focusedScenes.length, isAutoPersonalize]);
 
   const handleAxisToggle = (axisId: string) => {
     let newAxes: string[];
@@ -437,7 +361,7 @@ function HomeContent() {
       {/* ヒーローセクション（ホーム画面でのみ表示） */}
       {viewState === "HOME" && (
         <>
-          <section className="relative h-[80vh] w-full flex flex-col items-center justify-center">
+          <section className="relative pt-32 pb-16 w-full flex flex-col items-center justify-center">
             {/* 背景画像 */}
             <div className="absolute inset-0 z-0">
               <img
@@ -450,17 +374,17 @@ function HomeContent() {
             {/* メインコンテンツ */}
             <div className="relative z-10 w-full max-w-4xl px-6 text-center flex flex-col items-center gap-8">
               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-                <h1 className="text-3xl md:text-6xl font-bold text-white tracking-tight text-shadow-lg leading-tight">
+                <h1 className="text-3xl md:text-5xl font-bold text-white tracking-tight text-shadow-lg leading-tight">
                   あなた専属の、<br />
                   <span className="text-brand-orange-dark">AIグルメコンシェルジュ</span>
                 </h1>
-                <p className="text-gray-200 text-lg md:text-xl font-sans font-light tracking-wide max-w-2xl mx-auto leading-relaxed">
-                  口コミをAIが分析し、客観的に評価。<br className="hidden md:block" />
-                  あなたの好みや価値観に合わせて、<span className="text-white font-medium">最適なお店</span>をご提案します。
+                <p className="text-brand-gray text-type-body tracking-wide max-w-2xl mx-auto leading-relaxed">
+                  口コミをAIが分析し、客観的に評価。<br />
+                  あなたの好みに合わせて、<span className="text-white font-medium">最適なお店</span>をご提案します。
                 </p>
               </div>
 
-              <div className="w-full max-w-2xl animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
+              <div className="mt-8 w-full max-w-2xl animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
                 <SearchInput
                   onSearchStart={handleSearchStart}
                   onSearchComplete={handleSearchComplete}
@@ -470,40 +394,34 @@ function HomeContent() {
           </section>
 
           {/* サービスの価値提案（メリット） */}
-          <section className="py-24 bg-white">
+          <section className="py-8 bg-white">
             <div className="container mx-auto px-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
+              <div className="grid grid-cols-[repeat(3,minmax(0,300px))] gap-4 text-center justify-center">
                 <div className="flex flex-col items-center gap-4 group">
-                  <div className="w-16 h-16 rounded-full bg-[#FAFAFA] flex items-center justify-center group-hover:bg-brand-orange-dark/10 transition-colors">
+                  <div className="w-8 h-8 md:w-16 md:h-16 rounded-full bg-brand-gray-light flex items-center justify-center">
                     <Sparkles className="w-8 h-8 text-brand-orange-dark" />
                   </div>
-                  <h3 className="text-xl font-bold">客観的なAI評価</h3>
-                  <p className="text-gray-500 font-sans text-sm leading-relaxed">
-                    口コミを公平に分析。<br />
-                    サクラやノイズを排除し、<br />
-                    お店の本来の実力を数値化します。
+                  <h3 className="text-type-body font-bold text-brand-black">客観的なAI評価</h3>
+                  <p className="text-type-memo text-brand-black-light leading-relaxed">
+                    AIが口コミを公平に分析します。
                   </p>
                 </div>
                 <div className="flex flex-col items-center gap-4 group">
-                  <div className="w-16 h-16 rounded-full bg-[#FAFAFA] flex items-center justify-center group-hover:bg-brand-orange-dark/10 transition-colors">
+                  <div className="w-8 h-8 md:w-16 md:h-16 rounded-full bg-brand-gray-light flex items-center justify-center">
                     <Heart className="w-8 h-8 text-rose-500" />
                   </div>
-                  <h3 className="text-xl font-bold">あなただけのマッチ度</h3>
-                  <p className="text-gray-500 font-sans text-sm leading-relaxed">
-                    味、雰囲気、サービスの好みや<br />
-                    利用シーンに合わせて、<br />
-                    あなたとの相性を瞬時に計算。
+                  <h3 className="text-type-body font-bold text-brand-black">あなただけのマッチ度</h3>
+                  <p className="text-type-memo text-brand-black-light leading-relaxed">
+                    AIがあなたの好みと相性を瞬時に計算します。
                   </p>
                 </div>
                 <div className="flex flex-col items-center gap-4 group">
-                  <div className="w-16 h-16 rounded-full bg-[#FAFAFA] flex items-center justify-center group-hover:bg-brand-orange-dark/10 transition-colors">
+                  <div className="w-8 h-8 md:w-16 md:h-16 rounded-full bg-brand-gray-light flex items-center justify-center">
                     <Award className="w-8 h-8 text-[#C5A059]" />
                   </div>
-                  <h3 className="text-xl font-bold">失敗しないお店選び</h3>
-                  <p className="text-gray-500 font-sans text-sm leading-relaxed">
-                    ビジネスからデートまで。<br />
-                    熟練のコンシェルジュのように、<br />
-                    その日の目的に最適解を導きます。
+                  <h3 className="text-type-body font-bold text-brand-black">失敗しないお店選び</h3>
+                  <p className="text-type-memo text-brand-black-light leading-relaxed">
+                    AIが利用シーンに合わせて最適なお店を提案します。
                   </p>
                 </div>
               </div>
@@ -539,14 +457,14 @@ function HomeContent() {
                 {/* Auto Personalize Toggle */}
                 <div className="w-full border border-brand-gray pl-6 pr-6 rounded-xl bg-white/50 overflow-hidden shadow-sm">
                   <div className="pt-5">
-                    <p className={`text-sm text-brand-black font-bold text-center ${!user ? 'mb-12' : 'mb-2'}`}>あなたが重視するポイントに合わせて、スコアを最適化します。</p>
+                    <p className={"text-type-body font-semibold text-brand-black text-center mb-6"}>あなたが重視するポイントに合わせて、スコアを最適化します。</p>
 
                     {/* Tab Navigation */}
                     <div className="flex justify-center mb-0 border-b border-brand-gray w-full">
                       <div className="flex gap-8 relative">
                         <button
                           onClick={() => setIsAutoPersonalize(false)}
-                          className={`pb-3 px-2 text-sm font-bold transition-all relative ${!isAutoPersonalize ? 'text-brand-orange-dark' : 'text-brand-black-light hover:text-brand-black'}`}
+                          className={`pb-3 px-2 text-type-button transition-all relative ${!isAutoPersonalize ? 'text-brand-orange-dark' : 'text-brand-black-light hover:text-brand-black'}`}
                         >
                           手動選択
                           {!isAutoPersonalize && (
@@ -564,30 +482,14 @@ function HomeContent() {
                               }
                               setIsAutoPersonalize(true);
                             }}
-                            className={`pb-3 px-2 text-sm font-bold transition-all relative flex items-center gap-2 ${isAutoPersonalize ? 'text-brand-orange-dark' : 'text-brand-black-light hover:text-brand-black'}`}
+                            className={`pb-3 px-2 text-type-button transition-all relative flex items-center gap-2 ${isAutoPersonalize ? 'text-brand-orange-dark' : 'text-brand-black-light hover:text-brand-orange'}`}
                           >
-                            <Sparkles className="w-3.5 h-3.5" />
-                            傾向を自動反映
+                            <Sparkles className={`w-3.5 h-3.5`} />
+                            {!user ? "ログインして傾向を自動反映" : "傾向を自動反映"}
                             {isAutoPersonalize && (
                               <div className="absolute bottom-0 left-0 w-full h-0.5 bg-brand-orange-dark rounded-t-full" />
                             )}
                           </button>
-
-                          {/* Tooltip for non-logged-in users */}
-                          {!user && (
-                            <div className="
-                              absolute z-20 pointer-events-none whitespace-nowrap bg-brand-black-dark text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg
-                              bottom-full mb-3 left-1/2 -translate-x-1/2
-                              animate-in fade-in zoom-in-95 duration-300
-                            ">
-                              <span className="shrink-0">ログインして傾向をAIに学習</span>
-                              {/* Arrow */}
-                              <div className="
-                                absolute border-4 border-transparent
-                                top-full left-1/2 -translate-x-1/2 border-t-brand-black-dark
-                              " />
-                            </div>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -595,9 +497,10 @@ function HomeContent() {
 
                   <div>
                     {!isAutoPersonalize ? (
-                      <div className="flex flex-col gap-6 p-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                      <div className="flex flex-col p-4 animate-in fade-in slide-in-from-top-2 duration-300">
                         {/* 1. Axes */}
                         <div className="flex flex-col gap-3">
+                          <h3 className="text-type-memo font-bold text-brand-black-light text-center">重視するポイント</h3>
                           <div className="flex flex-wrap gap-2 justify-center">
                             {[
                               { id: 'taste', label: '味', icon: Utensils },
@@ -617,64 +520,81 @@ function HomeContent() {
                           </div>
                         </div>
 
+                        {/* 2. Manual Scenarios */}
+                        <div className="flex flex-col gap-3 mt-4 border-t border-brand-gray pt-4">
+                          <h3 className="text-type-memo font-bold text-brand-black-light text-center">利用シーン</h3>
+                          <div className="flex flex-wrap gap-2 justify-center">
+                            {[
+                              { id: 'solo', label: '少人数' },
+                              { id: 'group', label: '団体' },
+                              { id: 'date', label: 'デート' },
+                              { id: 'business', label: 'ビジネス' },
+                              { id: 'family', label: 'ファミリー' }
+                            ].map((scene) => (
+                              <SelectionButton
+                                key={scene.id}
+                                isSelected={focusedScenes.includes(scene.id)}
+                                onClick={() => handleSceneToggle(scene.id)}
+                                label={scene.label}
+                                variant="chip"
+                              />
+                            ))}
+                          </div>
+                        </div>
+
                       </div>
                     ) : (
                       <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-300 w-full mb-6">
                         {/* Chart Container */}
-                        <p className="text-sm text-brand-black mt-4 text-center">
-                          あなたの過去の評価(Good/Bad)から傾向を分析しています。
-                        </p>
+                        <h3 className="text-type-memo font-bold text-brand-black-light text-center mt-4">AIが学習したあなたの傾向</h3>
                         <div className="w-full max-w-sm">
                           <UserPreferenceRadar preferences={profile?.aiPreferences} compact />
                         </div>
-                        <p className="text-xs text-brand-black-light mb-2 text-center">
-                          💡 4軸の傾向に加え、700以上の特徴量からあなたの好みを深く分析しています
+                        <p className="text-type-memo text-brand-black-light mt-2 text-center">
+                          💡 評価(Good/Bad)をしてAIの精度を上げましょう
                         </p>
+
+                        {/* 3. Auto Scenarios */}
+                        <div className="flex flex-col gap-3 mt-4 border-t border-brand-gray pt-4">
+                          <h3 className="text-type-memo font-bold text-brand-black-light text-center">利用シーン</h3>
+                          <div className="flex flex-wrap gap-2 justify-center">
+                            {[
+                              { id: 'solo', label: '少人数' },
+                              { id: 'group', label: '団体' },
+                              { id: 'date', label: 'デート' },
+                              { id: 'business', label: 'ビジネス' },
+                              { id: 'family', label: 'ファミリー' }
+
+                            ].map((scene) => (
+                              <SelectionButton
+                                key={scene.id}
+                                isSelected={focusedScenes.includes(scene.id)}
+                                onClick={() => handleSceneToggle(scene.id)} // Shared Handler
+                                label={scene.label}
+                                variant="chip"
+                              />
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* 2. Global Scenarios (Now outside personalization box) */}
-                <div className="flex flex-col gap-3 mt-4">
-                  <h3 className="text-sm text-brand-black font-bold uppercase tracking-wider text-center">利用シーン絞り込み</h3>
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    {[
-                      { id: 'business', label: 'ビジネス' },
-                      { id: 'date', label: 'デート' },
-                      { id: 'solo', label: 'お一人様' },
-                      { id: 'family', label: 'ファミリー' },
-                      { id: 'group', label: '団体' },
-                    ].map((scene) => (
-                      <SelectionButton
-                        key={scene.id}
-                        isSelected={focusedScenes.includes(scene.id)}
-                        onClick={() => handleSceneToggle(scene.id)}
-                        label={scene.label}
-                        variant="chip"
-                      />
-                    ))}
-                  </div>
-                </div>
+                {/* 2. Global Scenarios (Removed from here) */}
+
 
               </div>
 
               {/* Sort Controls */}
               <div className="flex flex-col items-center mt-6 gap-2">
-                <span className="text-sm text-brand-black font-bold">並び替え</span>
+                <span className="text-type-body font-semibold text-brand-black">並び替え</span>
                 <div className="bg-white p-1 rounded-full border border-brand-gray flex shadow-sm">
-                  <SelectionButton
-                    isSelected={sortBy === 'match'}
-                    onClick={() => setSortBy('match')}
-                    label="マッチ度"
-                    icon={Sparkles}
-                    variant="segment"
-                    disabled={!isAutoPersonalize && focusedAxes.length === 0}
-                  />
                   <SelectionButton
                     isSelected={sortBy === 'ai'}
                     onClick={() => setSortBy('ai')}
                     label="AI分析スコア"
+                    icon={Sparkles}
                     variant="segment"
                   />
                   <SelectionButton
@@ -686,11 +606,10 @@ function HomeContent() {
                   />
                 </div>
               </div>
-
             </div>
           </div>
           <div className="flex-1 w-full min-w-0">
-            {loading && filteredPlaces.length === 0 ? (
+            {loading && sortedPlaces.length === 0 ? (
               <div className="py-20 flex flex-col items-center justify-center text-brand-black animate-pulse bg-white/50 rounded-xl border border-dashed border-brand-gray">
                 <MapPin className="mb-4 w-10 h-10 text-brand-black-light" />
                 <p className="font-bold text-lg">Googleマップから最新情報を検索中...</p>
@@ -698,17 +617,18 @@ function HomeContent() {
               </div>
             ) : (
               <PlaceList
-                places={filteredPlaces}
+                places={sortedPlaces}
                 onSelect={handlePlaceSelect}
                 onLoadMore={() => handleLoadMore()}
                 hasMore={!!cachedNextPageToken}
                 loadingMore={loadingMore}
                 focusedAxes={focusedAxes}
                 focusedScenes={focusedScenes}
-                personalizedScores={isAutoPersonalize ? pScores : undefined}
+                personalizedScores={pScores}
                 onActionComplete={handleActionComplete}
                 isScoreOutdated={isScoreOutdated}
                 onRecalculate={handleRecalculate}
+                query={cachedQuery}
               />
             )}
           </div>
@@ -792,7 +712,7 @@ function HomeContent() {
             />
           </div>
         )}
-      {(viewState === "LIST" || viewState === "DETAIL") && <ComparisonTray />}
+      {(viewState === "LIST" || viewState === "DETAIL") && <ComparisonTray focusedScenes={focusedScenes} />}
     </main >
   );
 }
