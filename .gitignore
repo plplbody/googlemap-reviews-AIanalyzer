@@ -43,3 +43,6 @@ next-env.d.ts
 # secrets
 secrets/
 firebase-data/
+
+# secrets command
+.command

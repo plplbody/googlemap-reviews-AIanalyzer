@@ -557,17 +557,18 @@ function HomeContent() {
                     ) : (
                       <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-300 w-full mb-6">
                         {/* Chart Container */}
-                        <p className="text-type-memo text-brand-black mt-4 text-center">
-                          あなたの過去の評価(Good/Bad)から傾向を分析しています。
-                        </p>
+                        <h3 className="text-type-memo font-bold text-brand-black-light uppercase tracking-wider text-center mt-4">AIが学習したあなたの傾向</h3>
                         <div className="w-full max-w-sm">
                           {/* Use effectivePrefs if available, otherwise global profile */}
                           <UserPreferenceRadar preferences={effectivePrefs || profile?.aiPreferences} compact />
                         </div>
+                        <p className="text-type-memo text-brand-black-light mt-2 mb-2 text-center">
+                          💡 評価(Good/Bad)をしてAIの精度を上げましょう
+                        </p>
 
                         {/* 3. Auto Scenarios */}
-                        <div className="flex flex-col gap-3 mt-4 w-full px-6">
-                          <h3 className="text-type-memo font-bold text-brand-black-light uppercase tracking-wider text-center">今の気分・シーン (Vector Boost)</h3>
+                        <div className="flex flex-col gap-3 mt-4 border-t border-brand-gray pt-4">
+                          <h3 className="text-type-memo font-bold text-brand-black-light uppercase tracking-wider text-center">利用シーン</h3>
                           <div className="flex flex-wrap gap-2 justify-center">
                             {[
                               { id: 'solo', label: '少人数' },
@@ -587,10 +588,6 @@ function HomeContent() {
                             ))}
                           </div>
                         </div>
-
-                        <p className="text-type-memo text-brand-black-light mt-6 mb-2 text-center">
-                          💡 評価(Good/Bad)をしてAIの精度を上げましょう
-                        </p>
                       </div>
                     )}
                   </div>
