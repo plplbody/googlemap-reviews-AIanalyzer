@@ -12,6 +12,7 @@ import PlaceList from '@/components/PlaceList';
 import { ComparisonTray } from '@/components/ComparisonTray';
 import { SelectionButton } from '@/components/ui/SelectionButton';
 import { Place, UsageScores } from "@/types/schema";
+import { UserProfile } from "@/types/user";
 import {
   searchPlaces,
   getPlaceDetails,
@@ -45,6 +46,7 @@ function HomeContent() {
   // Auth for Personalization
   const { user, profile, signInWithGoogle } = useAuth();
   const [pScores, setPScores] = useState<Record<string, PersonalizedScore>>({});
+  const [effectivePrefs, setEffectivePrefs] = useState<UserProfile['aiPreferences'] | undefined>(undefined);
 
   // Auto Personalize Toggle
   // Default to true if user is logged in, false otherwise
@@ -86,6 +88,15 @@ function HomeContent() {
         scenarioIds: scenes
       });
       setPScores(scores);
+
+      // Extract effective preferences from the first result (they are context-based, so identical for all places in this batch)
+      const firstResult = Object.values(scores)[0];
+      if (firstResult?.effectivePreferences) {
+        setEffectivePrefs(firstResult.effectivePreferences);
+      } else {
+        setEffectivePrefs(undefined); // Fallback/Reset
+      }
+
     } catch (e) {
       console.error("Failed to fetch personalized scores", e);
     }
@@ -500,7 +511,7 @@ function HomeContent() {
                       <div className="flex flex-col p-4 animate-in fade-in slide-in-from-top-2 duration-300">
                         {/* 1. Axes */}
                         <div className="flex flex-col gap-3">
-                          <h3 className="text-type-memo font-bold text-brand-black-light text-center">重視するポイント</h3>
+                          <h3 className="text-type-memo font-bold text-brand-black-light uppercase tracking-wider text-center">重視するポイント</h3>
                           <div className="flex flex-wrap gap-2 justify-center">
                             {[
                               { id: 'taste', label: '味', icon: Utensils },
@@ -522,7 +533,7 @@ function HomeContent() {
 
                         {/* 2. Manual Scenarios */}
                         <div className="flex flex-col gap-3 mt-4 border-t border-brand-gray pt-4">
-                          <h3 className="text-type-memo font-bold text-brand-black-light text-center">利用シーン</h3>
+                          <h3 className="text-type-memo font-bold text-brand-black-light uppercase tracking-wider text-center">利用シーン</h3>
                           <div className="flex flex-wrap gap-2 justify-center">
                             {[
                               { id: 'solo', label: '少人数' },
@@ -546,17 +557,17 @@ function HomeContent() {
                     ) : (
                       <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-300 w-full mb-6">
                         {/* Chart Container */}
-                        <h3 className="text-type-memo font-bold text-brand-black-light text-center mt-4">AIが学習したあなたの傾向</h3>
-                        <div className="w-full max-w-sm">
-                          <UserPreferenceRadar preferences={profile?.aiPreferences} compact />
-                        </div>
-                        <p className="text-type-memo text-brand-black-light mt-2 text-center">
-                          💡 評価(Good/Bad)をしてAIの精度を上げましょう
+                        <p className="text-type-memo text-brand-black mt-4 text-center">
+                          あなたの過去の評価(Good/Bad)から傾向を分析しています。
                         </p>
+                        <div className="w-full max-w-sm">
+                          {/* Use effectivePrefs if available, otherwise global profile */}
+                          <UserPreferenceRadar preferences={effectivePrefs || profile?.aiPreferences} compact />
+                        </div>
 
                         {/* 3. Auto Scenarios */}
-                        <div className="flex flex-col gap-3 mt-4 border-t border-brand-gray pt-4">
-                          <h3 className="text-type-memo font-bold text-brand-black-light text-center">利用シーン</h3>
+                        <div className="flex flex-col gap-3 mt-4 w-full px-6">
+                          <h3 className="text-type-memo font-bold text-brand-black-light uppercase tracking-wider text-center">今の気分・シーン (Vector Boost)</h3>
                           <div className="flex flex-wrap gap-2 justify-center">
                             {[
                               { id: 'solo', label: '少人数' },
@@ -576,6 +587,10 @@ function HomeContent() {
                             ))}
                           </div>
                         </div>
+
+                        <p className="text-type-memo text-brand-black-light mt-6 mb-2 text-center">
+                          💡 評価(Good/Bad)をしてAIの精度を上げましょう
+                        </p>
                       </div>
                     )}
                   </div>

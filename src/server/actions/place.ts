@@ -199,7 +199,8 @@ async function searchPlacesIdOnly(query: string, pageToken?: string): Promise<{ 
         const requestBody: any = {
             textQuery: query,
             languageCode: 'ja',
-            maxResultCount: 20
+            maxResultCount: 20,
+            includedType: 'restaurant'
         };
 
         if (pageToken) {
@@ -420,7 +421,8 @@ async function fetchRawGooglePlaces(query: string, pageToken?: string) {
     const requestBody: any = {
         textQuery: query,
         languageCode: 'ja',
-        maxResultCount: 20
+        maxResultCount: 20,
+        includedType: 'restaurant'
     };
 
     if (pageToken) {
