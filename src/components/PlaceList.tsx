@@ -2,6 +2,8 @@
 
 import { Place } from '@/types/schema';
 import PlaceListItem from './PlaceListItem';
+import { RefreshCw } from 'lucide-react';
+import { PersonalizedScore } from '@/server/actions/personalize';
 
 interface PlaceListProps {
     places: Place[];
@@ -11,35 +13,29 @@ interface PlaceListProps {
     loadingMore: boolean;
     focusedAxes?: string[];
     focusedScenes?: string[];
+    personalizedScores?: Record<string, PersonalizedScore>;
+    onActionComplete?: () => void;
+    isScoreOutdated?: boolean;
+    onRecalculate?: () => void;
+    query: string;
 }
 
 // 検索結果のリストを表示するコンポーネント
-export default function PlaceList({ places, onSelect, onLoadMore, hasMore, loadingMore, focusedAxes, focusedScenes }: PlaceListProps) {
+export default function PlaceList({ places, onSelect, onLoadMore, hasMore, loadingMore, focusedAxes, focusedScenes, personalizedScores, onActionComplete, isScoreOutdated, onRecalculate, query }: PlaceListProps) {
     return (
         <div className="w-full max-w-6xl mx-auto px-4 py-8">
             <div className="mb-6 flex items-end justify-between">
                 <div>
-                    <h2 className="text-2xl font-bold text-slate-900 mb-1">検索結果</h2>
-                    <p className="text-sm text-slate-500">
-                        検索キーワードに関連度の高い上位20件を表示しています
-                    </p>
+                    <h2 className="text-type-subtitle font-bold text-brand-black mb-1">「{query}」の検索結果</h2>
                 </div>
-                {hasMore && (
+                {/* Manual Recalculate Button (Replaces Load More at top) */}
+                {isScoreOutdated && onRecalculate && (
                     <button
-                        onClick={onLoadMore}
-                        disabled={loadingMore}
-                        className="px-6 py-2 bg-white border border-slate-200 text-slate-600 text-sm font-bold rounded-full hover:bg-slate-50 hover:border-orange-500 hover:text-orange-600 transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shrink-0"
+                        onClick={onRecalculate}
+                        className="px-6 py-2 bg-brand-orange-dark text-white text-sm font-bold rounded-full hover:bg-brand-orange-dark/90 transition-all duration-300 shadow-md flex items-center gap-2 shrink-0 animate-in fade-in zoom-in"
                     >
-                        {loadingMore ? (
-                            <>
-                                <div className="w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
-                                読み込み中...
-                            </>
-                        ) : (
-                            <>
-                                もっと見る
-                            </>
-                        )}
+                        <RefreshCw className="w-4 h-4" />
+                        スコア再計算
                     </button>
                 )}
             </div>
@@ -51,6 +47,10 @@ export default function PlaceList({ places, onSelect, onLoadMore, hasMore, loadi
                         onSelect={onSelect}
                         focusedAxes={focusedAxes}
                         focusedScenes={focusedScenes}
+                        personalizedScore={
+                            personalizedScores?.[place.id]?.finalScore ?? place.trueScore
+                        }
+                        onActionComplete={onActionComplete}
                     />
                 ))}
             </div>
@@ -60,11 +60,11 @@ export default function PlaceList({ places, onSelect, onLoadMore, hasMore, loadi
                     <button
                         onClick={onLoadMore}
                         disabled={loadingMore}
-                        className="px-8 py-3 bg-white border border-slate-200 text-slate-600 font-medium rounded-full hover:bg-slate-50 hover:border-orange-500 hover:text-orange-600 transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        className="px-8 py-3 bg-white border border-brand-gray text-brand-black font-medium rounded-full hover:bg-brand-gray-light hover:border-brand-orange-dark hover:text-brand-orange-dark transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
                         {loadingMore ? (
                             <>
-                                <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+                                <div className="w-4 h-4 border-2 border-brand-black-light border-t-transparent rounded-full animate-spin" />
                                 読み込み中...
                             </>
                         ) : (

@@ -71,6 +71,7 @@
 | **DoS** | **入力文字数制限** | **✅ 対応済 (Fixed)** | `place.ts` にて検索クエリを最大100文字に制限。 |
 | **Rate Limit** | アクセス頻度制限 | **✅ 対応済 (Fixed)** | `rate-limit.ts` (Firestore-based Fixed Window Counter) を実装済み。 |
 | **Logs** | ログへの個人情報出力 | **✅ 対応済 (Fixed)** | `sanitizeLog` によりEmail/電話番号パターンをマスクして出力するように修正済み。 |
+| **APIKey** | 公開APIキー漏洩 | **⚠️ 未対応 (Warning)** | googleMap, firebaseの公開APIキーを悪用されない処置が必要。 |
 
 ### 4.2. 対応計画 (Mitigation Plan)
 

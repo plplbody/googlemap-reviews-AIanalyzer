@@ -10,7 +10,7 @@ export interface AxisScores {
 export interface UsageScores {
   business: number; // 接待・会食
   date: number;     // デート
-  solo: number;     // お一人様
+  solo: number;     // 少人数
   family: number;   // 家族連れ
   group: number;    // 団体利用
 }
@@ -57,7 +57,7 @@ export interface Place {
     endPrice?: { currencyCode: string; units: string; nanos?: number };
   };
   reviews?: string[]; // Array of review texts
-  
+
   // Location Info
   location?: {
     lat: number;
@@ -103,7 +103,7 @@ export interface Place {
   axisScores?: AxisScores;
   usageScores?: UsageScores;
   usageSummary?: string; // 利用シーン評価の根拠
-  summary?: string;
+  summary?: string[]; // AI Summary formatted as a list of key points
   gapReason?: string;
   axisAnalysis?: {
     taste: { pros: string[]; cons: string[]; summary: string; };
@@ -111,6 +111,23 @@ export interface Place {
     atmosphere: { pros: string[]; cons: string[]; summary: string; };
     cost: { pros: string[]; cons: string[]; summary: string; };
   };
+
+  // AI Feature Extraction (Recommendation Engine)
+  area?: string[]; // Standardized area hierarchy (e.g. ["Tokyo", "Shinjuku City"])
+  genre?: string[]; // Standardized genres from API Types (e.g. ["ramen_restaurant"])
+
+  // Master Feature Vector (-1.0 to 1.0)
+  featureVector?: Record<string, number>;
+
+  // Semantic Embedding (Vertex AI text-embedding-005)
+  embeddingSourceText?: string; // Logic: "[Name] is [Genre] in [Area]. [Tags]. [Summary]"
+  embeddingVector?: number[]; // 768-dim vector
+
+  // Keep for UI display (optional/derived)
+  featureTags?: {
+    tag: string; // e.g. "Rich Soup"
+    axis: 'taste' | 'service' | 'atmosphere' | 'cost';
+  }[];
 
   analysisStats?: {
     totalReviewsFetched: number;
@@ -123,3 +140,4 @@ export interface Place {
   createdAt: Date;
   updatedAt: Date;
 }
+
