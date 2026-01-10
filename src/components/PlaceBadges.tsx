@@ -3,7 +3,7 @@ import { Briefcase, Heart, User, Users } from 'lucide-react';
 
 export function PlaceBadges({ place }: { place: Place }) {
     return (
-        <div className="flex flex-wrap gap-2 mt-2 text-type-memo text-xs font-semibold text-brand-black">
+        <div className="flex flex-wrap gap-2 mt-2 text-type-memo font-semibold text-brand-black">
             {/* Usage Scenarios */}
             {place.usageScores?.solo && place.usageScores.solo >= 4.0 && (
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full brand-gray border border-brand-gray tracking-wide shadow-sm">
