@@ -118,7 +118,7 @@ export function FeedbackModal({ isOpen, onClose, place, evaluationType, onSubmit
                                                     <button
                                                         onClick={() => toggleNegative(feature.key, 'too_low')}
                                                         className={`px-2 py-2 text-xs rounded border transition-colors ${currentVal === 'too_low'
-                                                            ? 'bg-brand-black-dark text-white border-brand-black-dark'
+                                                            ? 'bg-brand-black-dark text-brand-gray-dark border-brand-black-dark'
                                                             : 'bg-white border-brand-gray text-brand-black hover:bg-brand-gray-light'
                                                             }`}
                                                     >
@@ -127,7 +127,7 @@ export function FeedbackModal({ isOpen, onClose, place, evaluationType, onSubmit
                                                     <button
                                                         onClick={() => toggleNegative(feature.key, 'too_high')}
                                                         className={`px-2 py-2 text-xs rounded border transition-colors ${currentVal === 'too_high'
-                                                            ? 'bg-brand-black-dark text-white border-brand-black-dark'
+                                                            ? 'bg-brand-black-dark text-brand-gray-dark border-brand-black-dark'
                                                             : 'bg-white border-brand-gray text-brand-black hover:bg-brand-gray-light'
                                                             }`}
                                                     >
@@ -147,7 +147,7 @@ export function FeedbackModal({ isOpen, onClose, place, evaluationType, onSubmit
                 <div className="p-4 border-t border-brand-gray bg-brand-gray-light flex justify-end">
                     <button
                         onClick={handleSubmit}
-                        className={`flex items-center gap-2 px-6 py-2.5 rounded-full font-bold text-white shadow-md transition-transform active:scale-95 ${evaluationType === 'good' ? 'bg-rose-500 hover:bg-rose-600' : 'bg-brand-black hover:bg-brand-black-dark'
+                        className={`flex items-center gap-2 px-6 py-2.5 rounded-full font-bold text-brand-gray-dark shadow-md transition-transform active:scale-95 ${evaluationType === 'good' ? 'bg-rose-500 hover:bg-rose-600' : 'bg-brand-black hover:bg-brand-black-dark'
                             }`}
                     >
                         <Check size={18} />

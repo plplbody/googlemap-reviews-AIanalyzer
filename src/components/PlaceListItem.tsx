@@ -1,13 +1,12 @@
-'use client';
-
 import { Place } from '@/types/schema';
-import { Star, MapPin, ChevronRight, Loader2, Train, Scale, DollarSign, Sparkles } from 'lucide-react';
+import { Star, MapPin, ChevronRight, Loader2, Train, Scale, DollarSign, Sparkles, CheckCircle, Pencil } from 'lucide-react';
 import { PlaceBadges } from '@/components/PlaceBadges';
 import { updateStationInfo } from '@/server/actions/station';
 import { useEffect, useState } from 'react';
 import { ActionButtons } from '@/components/ActionButtons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useComparison } from '@/contexts/ComparisonContext';
+import MemoModal from './MemoModal';
 
 interface PlaceListItemProps {
     place: Place;
@@ -16,11 +15,33 @@ interface PlaceListItemProps {
     focusedScenes?: string[];
     personalizedScore?: number;
     onActionComplete?: () => void;
+    isVisited?: boolean;
+    onToggleVisited?: (visited: boolean) => void;
+    viewMode?: 'DEFAULT' | 'PROFILE'; // Explicit view context
+
+    // Memo Props
+    memo?: string;
+    repeat?: 'yes' | 'no' | 'maybe';
+    onUpdateMemo?: (memo: string, repeat: 'yes' | 'no' | 'maybe') => Promise<void>;
 }
 
-export default function PlaceListItem({ place, onSelect, focusedAxes = [], focusedScenes = [], onActionComplete, ...props }: PlaceListItemProps) {
+export default function PlaceListItem({
+    place,
+    onSelect,
+    focusedAxes = [],
+    focusedScenes = [],
+    onActionComplete,
+    isVisited = false,
+    onToggleVisited,
+    viewMode = 'DEFAULT',
+    memo,
+    repeat,
+    onUpdateMemo,
+    ...props
+}: PlaceListItemProps) {
     const { user } = useAuth();
     const { selectedPlaces, toggleSelection } = useComparison();
+    const [isMemoOpen, setIsMemoOpen] = useState(false);
 
     // Check if selected
     const isSelected = selectedPlaces.some(p => p.id === place.id);
@@ -28,8 +49,8 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
     const isAnalyzed = place.status === 'completed' && place.trueScore !== undefined;
     const isAnalyzing = place.status === 'pending' || place.status === 'processing';
 
-    // Unified Score (AI Score OR Personalized Score)
-    const yourScore = props.personalizedScore ?? 0;
+    // Unified Score: Use Personalized if avail, else fallback to AI Score (trueScore), else 0
+    const yourScore = props.personalizedScore ?? place.trueScore ?? 0;
 
     // Async trigger for station info
     useEffect(() => {
@@ -42,8 +63,79 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
             onClick={() => onSelect(place.id)}
             className={`bg-white rounded-2xl p-6 shadow-sm hover:shadow-xl border transition-all duration-300 cursor-pointer group flex flex-col h-full select-none active:scale-[0.98] active:bg-brand-gray-light relative ${isSelected ? 'border-brand-orange-dark ring-1 ring-brand-orange-dark' : 'border-brand-gray'}`}
         >
+            {/* Top-Left Action: Visited Toggle (Profile Only) */}
+            {/* Profile Context Section (Unified, Relative) */}
+            {viewMode === 'PROFILE' && (
+                <div className="mb-4 p-2 bg-brand-gray-light rounded-xl border border-brand-gray flex flex-col">
+                    <div className="flex items-center gap-2 pb-3">
+                        {/* Visited Toggle */}
+                        {onToggleVisited && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onToggleVisited(!isVisited);
+                                }}
+                                className={`px-3 py-1.5 rounded-full shadow-sm border transition-all flex items-center gap-1.5 ${isVisited
+                                    ? 'bg-emerald-500 border-emerald-500 text-brand-gray-dark'
+                                    : 'bg-white border-brand-gray text-brand-black-light hover:bg-emerald-50 hover:border-emerald-200'
+                                    }`}
+                            >
+                                {isVisited ? (
+                                    <>
+                                        <CheckCircle className="w-4 h-4" />
+                                        <span className="text-xs font-bold">来店済</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="w-4 h-4 rounded-full border-2 border-brand-gray-dark" />
+                                        <span className="text-xs font-bold">来店したらチェック</span>
+                                    </>
+                                )}
+                            </button>
+                        )}
+
+                        {/* Edit Memo Button */}
+                        {isVisited && onUpdateMemo && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsMemoOpen(true);
+                                }}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full shadow-sm border transition-all ${memo || repeat
+                                    ? 'bg-brand-orange-light/50 border-brand-orange-light text-brand-orange-dark'
+                                    : 'bg-white border-brand-gray text-brand-black-light hover:bg-brand-orange-light/50 hover:border-brand-orange-light hover:text-brand-orange-dark'
+                                    }`}
+                            >
+                                <Pencil className="w-3.5 h-3.5" />
+                                <span className="text-xs font-bold">{memo || repeat ? 'メモを編集' : 'メモを書く'}</span>
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Memo Content Display */}
+                    {(memo || repeat) && isVisited && (
+                        <div className="pt-3 border-t border-brand-gray-dark flex flex-col gap-2">
+                            <div className="flex items-start gap-3 text-xs">
+                                {repeat && (
+                                    <div className="shrink-0">
+                                        {repeat === 'yes' && <span className="px-2 py-1 bg-brand-orange-light/50 text-brand-orange-dark rounded-lg font-bold border border-brand-orange-light whitespace-nowrap">リピートあり</span>}
+                                        {repeat === 'maybe' && <span className="px-2 py-1 bg-brand-orange-light/50 text-brand-orange-dark rounded-lg font-bold border border-brand-orange-light whitespace-nowrap">迷う</span>}
+                                        {repeat === 'no' && <span className="px-2 py-1 bg-brand-gray-dark text-brand-black-light rounded-lg font-bold border border-brand-gray-dark whitespace-nowrap">リピートなし</span>}
+                                    </div>
+                                )}
+                                {memo && (
+                                    <div className="text-brand-black break-all ">
+                                        {memo}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Image & Header Section */}
-            <div className="flex gap-4 mb-4">
+            <div className={`flex gap-4 mb-4`}>
                 {place.hotpepper?.imageUrl ? (
                     <div className="relative shrink-0 w-24 h-24 rounded-xl overflow-hidden shadow-sm border border-brand-gray">
                         <img
@@ -65,6 +157,8 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
                         </h3>
                         {/* Price & Station Info */}
                         <div className="flex flex-col  gap-y-1 text-type-memo text-brand-black">
+                            {/* ... (Existing Price/Station logic) ... */}
+                            {/* Keeping existing render logic for Price/Station but truncated in snippet for brevity if not changing */}
                             <div className="flex items-center gap-1">
                                 <span>
                                     {(() => {
@@ -100,11 +194,12 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
                 <PlaceBadges place={place} />
             </div>
 
+
+
             {/* AI Analysis Score Badge */}
             <div className="mb-4 p-4 bg-brand-gray-light rounded-xl border border-brand-gray relative overflow-hidden">
                 {isAnalyzed ? (
                     <div className="flex flex-col gap-3">
-                        {/* Personalized Score Display (Prominent if active) */}
                         {/* Unified Score Display Row */}
                         <div className="flex justify-between">
                             {/* AI Score (Left - Prominent) */}
@@ -189,13 +284,19 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
                 )}
             </div>
 
+            {/* Footer Action Area */}
             <div className="mt-auto pt-4 flex items-center justify-between text-xs text-brand-black-light border-t border-brand-gray-light">
-                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                    {/* Action Buttons */}
+                    <div className="scale-90 origin-left">
+                        <ActionButtons place={place} uid={user?.uid} onActionComplete={onActionComplete} />
+                    </div>
+
                     {/* Compare Toggle */}
                     <button
                         onClick={() => toggleSelection(place)}
                         className={`relative rounded-full text-xs font-bold transition-all duration-300 shadow-sm hover:shadow-md group ${isSelected
-                            ? 'bg-brand-orange-dark text-white px-3 py-1.5 border border-brand-orange-dark'
+                            ? 'bg-brand-orange-dark text-brand-gray-dark px-3 py-1.5 border border-brand-orange-dark'
                             : 'p-[1.5px] bg-gradient-to-r from-brand-orange via-rose-300 to-brand-orange hover:from-brand-orange-dark hover:via-rose-400 hover:to-brand-orange-dark'
                             }`}
                     >
@@ -211,11 +312,6 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
                             </div>
                         )}
                     </button>
-
-                    {/* Action Buttons */}
-                    <div className="scale-90 origin-left">
-                        <ActionButtons place={place} uid={user?.uid} onActionComplete={onActionComplete} />
-                    </div>
                 </div>
 
                 <div className="flex items-center gap-1 text-brand-orange-dark font-medium group-hover:translate-x-1 transition-transform">
@@ -223,6 +319,17 @@ export default function PlaceListItem({ place, onSelect, focusedAxes = [], focus
                     <ChevronRight className="w-3 h-3" />
                 </div>
             </div>
+
+            {/* Memo Modal */}
+            {onUpdateMemo && (
+                <MemoModal
+                    isOpen={isMemoOpen}
+                    onClose={() => setIsMemoOpen(false)}
+                    onSave={onUpdateMemo}
+                    initialMemo={memo}
+                    initialRepeat={repeat}
+                />
+            )}
         </div>
     );
 }

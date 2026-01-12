@@ -385,13 +385,13 @@ function HomeContent() {
             {/* メインコンテンツ */}
             <div className="relative z-10 w-full max-w-4xl px-6 text-center flex flex-col items-center gap-8">
               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-                <h1 className="text-3xl md:text-5xl font-bold text-white tracking-tight text-shadow-lg leading-tight">
+                <h1 className="text-3xl md:text-5xl font-bold text-brand-gray-dark tracking-tight text-shadow-lg leading-tight">
                   あなた専属の、<br />
                   <span className="text-brand-orange-dark">AIグルメコンシェルジュ</span>
                 </h1>
                 <p className="text-brand-gray text-type-body tracking-wide max-w-2xl mx-auto leading-relaxed">
                   口コミをAIが分析し、客観的に評価。<br />
-                  あなたの好みに合わせて、<span className="text-white font-medium">最適なお店</span>をご提案します。
+                  あなたの好みに合わせて、<span className="text-brand-gray-dark font-medium">最適なお店</span>をご提案します。
                 </p>
               </div>
 
@@ -466,7 +466,7 @@ function HomeContent() {
               <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-top-4 duration-500 w-full max-w-4xl mx-auto">
 
                 {/* Auto Personalize Toggle */}
-                <div className="w-full border border-brand-gray pl-6 pr-6 rounded-xl bg-white/50 overflow-hidden shadow-sm">
+                <div className="w-full border border-brand-gray pl-3 pr-3 rounded-xl bg-white/50 overflow-hidden shadow-sm">
                   <div className="pt-5">
                     <p className={"text-type-body font-semibold text-brand-black text-center mb-6"}>あなたが重視するポイントに合わせて、スコアを最適化します。</p>
 
@@ -508,11 +508,11 @@ function HomeContent() {
 
                   <div>
                     {!isAutoPersonalize ? (
-                      <div className="flex flex-col p-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                      <div className="flex flex-col py-4 animate-in fade-in slide-in-from-top-2 duration-300">
                         {/* 1. Axes */}
                         <div className="flex flex-col gap-3">
                           <h3 className="text-type-memo font-bold text-brand-black-light uppercase tracking-wider text-center">重視するポイント</h3>
-                          <div className="flex flex-wrap gap-2 justify-center">
+                          <div className="flex  flex-wrap gap-2 justify-center">
                             {[
                               { id: 'taste', label: '味', icon: Utensils },
                               { id: 'service', label: '接客', icon: Heart },
@@ -563,7 +563,7 @@ function HomeContent() {
                           <UserPreferenceRadar preferences={effectivePrefs || profile?.aiPreferences} compact />
                         </div>
                         <p className="text-type-memo text-brand-black-light mt-2 mb-2 text-center">
-                          💡 評価(Good/Bad)をしてAIの精度を上げましょう
+                          💡 「いいね」をしてAIの精度を上げましょう
                         </p>
 
                         {/* 3. Auto Scenarios */}

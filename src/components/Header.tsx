@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Menu, X, Check, Heart, LogOut, User as UserIcon } from "lucide-react";
 
 interface HeaderProps {
-    viewState: "HOME" | "LIST" | "DETAIL";
+    viewState: "HOME" | "LIST" | "DETAIL" | "PROFILE";
     onResetHome: () => void;
 }
 
@@ -16,7 +16,7 @@ export default function Header({ viewState, onResetHome }: HeaderProps) {
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
     return (
-        <nav className={`absolute top-0 w-full z-50 p-6 flex justify-between items-center transition-colors duration-300 ${viewState === 'HOME' ? 'text-white' : 'text-brand-black-dark'}`}>
+        <nav className={`absolute top-0 w-full z-50 p-6 flex justify-between items-center transition-colors duration-300 ${viewState === 'HOME' ? 'text-brand-gray-dark' : 'text-brand-black-dark'}`}>
             <div
                 className="text-2xl font-bold tracking-widest cursor-pointer"
                 onClick={onResetHome}
@@ -33,7 +33,7 @@ export default function Header({ viewState, onResetHome }: HeaderProps) {
                 {user && (
                     <Link
                         href="/profile"
-                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-brand-orange-dark to-brand-orange-dark/80 text-white rounded-full shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5"
+                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-brand-orange-dark to-brand-orange-dark/80 text-brand-gray-dark rounded-full shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5"
                     >
                         <Heart className="w-4 h-4 fill-white" />
                         <span>グルメノート</span>
@@ -114,11 +114,11 @@ export default function Header({ viewState, onResetHome }: HeaderProps) {
                             {/* Gourmet Notebook Mobile */}
                             <Link
                                 href="/profile"
-                                className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-brand-orange-dark to-brand-orange-dark/80 text-white rounded-xl shadow-md font-bold justify-center"
+                                className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-brand-orange-dark to-brand-orange-dark/80 text-brand-gray-dark rounded-xl shadow-md font-bold justify-center"
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >
                                 <Heart className="w-4 h-4 fill-white" />
-                                グルメノート（お気に入り・評価）
+                                グルメノート
                             </Link>
 
                             <button

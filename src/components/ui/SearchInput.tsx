@@ -49,7 +49,7 @@ export default function SearchInput({ onSearchStart, onSearchComplete }: SearchI
                 <button
                     type="submit"
                     disabled={loading || !query.trim()}
-                    className="ml-2 bg-brand-orange-dark hover:bg-brand-orange text-white p-4 rounded-full transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-brand/50 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 aspect-square h-14 w-14 shrink-0"
+                    className="ml-2 bg-brand-orange-dark hover:bg-brand-orange text-brand-gray-dark p-4 rounded-full transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-brand/50 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 aspect-square h-14 w-14 shrink-0"
                 >
                     {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Search className="w-6 h-6 font-bold" />}
                 </button>

@@ -142,12 +142,12 @@ export function ScenePicker({ uid, onSelect, onClose }: ScenePickerProps) {
 
                     {/* Creation Area */}
                     {isCreating ? (
-                        <div className="flex items-center gap-2 mt-2 mb-3">
+                        <div className="flex items-center gap-2 mt-2 mb-3 animate-in fade-in slide-in-from-left-2 duration-200">
                             <input
                                 type="text"
                                 value={newSceneName}
                                 onChange={(e) => setNewSceneName(e.target.value)}
-                                placeholder="シーン名 (例: 激辛)"
+                                placeholder="シーン名（例: ラーメン、居酒屋）"
                                 className="flex-1 text-xs px-2 py-1.5 rounded border border-brand-gray-dark focus:outline-none focus:border-brand-orange"
                                 onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
                                 autoFocus
@@ -155,30 +155,30 @@ export function ScenePicker({ uid, onSelect, onClose }: ScenePickerProps) {
                             <button
                                 onClick={handleCreate}
                                 disabled={createLoading}
-                                className="p-1.5 bg-brand-orange text-white rounded hover:bg-brand-orange-dark disabled:opacity-50"
+                                className="p-1.5 bg-brand-orange text-brand-gray-dark rounded hover:bg-brand-orange-dark disabled:opacity-50"
                             >
                                 {createLoading ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
                             </button>
                         </div>
                     ) : (
-                        <div className="flex justify-between items-center mt-2">
-                            <button
-                                onClick={() => setIsCreating(true)}
-                                className="flex items-center gap-1 text-xs text-brand-orange hover:text-brand-orange-dark font-medium transition-colors"
-                            >
-                                <Plus size={14} />
-                                カスタムシーンを作成
-                            </button>
-
-                            <button
-                                onClick={handleConfirm}
-                                disabled={selectedIds.size === 0}
-                                className="px-4 py-1.5 bg-brand-orange text-white text-xs font-bold rounded-full hover:bg-brand-orange-dark disabled:opacity-50 transition-all shadow-sm"
-                            >
-                                決定 ({selectedIds.size})
-                            </button>
-                        </div>
+                        <button
+                            onClick={() => setIsCreating(true)}
+                            className="flex items-center gap-1 mt-2 mb-3 text-xs text-brand-orange hover:text-brand-orange-dark font-medium transition-colors w-fit"
+                        >
+                            <Plus size={14} />
+                            カスタムシーンを作成（例: ラーメン、居酒屋）
+                        </button>
                     )}
+
+                    <div className="flex justify-end items-center mt-2 pt-2 border-t border-brand-gray">
+                        <button
+                            onClick={handleConfirm}
+                            disabled={selectedIds.size === 0}
+                            className="px-4 py-1.5 bg-brand-orange text-brand-gray-dark text-xs font-bold rounded-full hover:bg-brand-orange-dark disabled:opacity-50 transition-all shadow-sm"
+                        >
+                            決定 ({selectedIds.size})
+                        </button>
+                    </div>
                 </div>
 
                 {/* Footer / Ignore hint */}

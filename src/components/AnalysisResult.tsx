@@ -111,7 +111,7 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
                                     className="w-full h-full object-cover"
                                 />
                                 {isSelected && (
-                                    <div className="absolute top-2 left-2 bg-brand-orange-dark text-white rounded-full p-1 shadow-md z-10">
+                                    <div className="absolute top-2 left-2 bg-brand-orange-dark text-brand-gray-dark rounded-full p-1 shadow-md z-10">
                                         <CheckCircle className="w-4 h-4 fill-white text-brand-orange-dark" />
                                     </div>
                                 )}
@@ -120,7 +120,7 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
                             <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-xl overflow-hidden shadow-sm border border-brand-gray shrink-0 bg-brand-gray-light flex flex-col items-center justify-center text-brand-black-light group">
                                 <span className="text-type-body font-bold">No Image</span>
                                 {isSelected && (
-                                    <div className="absolute top-2 left-2 bg-brand-orange-dark text-white rounded-full p-1 shadow-md z-10">
+                                    <div className="absolute top-2 left-2 bg-brand-orange-dark text-brand-gray-dark rounded-full p-1 shadow-md z-10">
                                         <CheckCircle className="w-4 h-4 fill-white text-brand-orange-dark" />
                                     </div>
                                 )}
@@ -132,14 +132,15 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
                     </div>
 
                     {/* Action Bar (Personalization) */}
-                    <div className="flex items-center justify-between mt-1">
+                    <div className="flex items-center justify-between mt-1 flex-wrap gap-y-2">
                         <PlaceBadges place={place} />
-                        <div className="ml-auto flex items-center gap-3">
+                        <div className="flex items-center gap-3">
+                            <ActionButtons place={place} uid={user?.uid} />
                             {/* Compare Toggle Button */}
                             <button
                                 onClick={() => toggleSelection(place)}
                                 className={`relative rounded-full text-type-button transition-all duration-300 shadow-sm hover:shadow-md active:scale-95 group ${isSelected
-                                    ? 'bg-brand-orange-dark text-white px-4 py-2 border border-brand-orange-dark'
+                                    ? 'bg-brand-orange-dark text-brand-gray-dark px-4 py-2 border border-brand-orange-dark'
                                     : 'p-[2px] bg-gradient-to-r from-orange-400 via-rose-300 to-orange-400 hover:from-brand-orange-dark hover:via-rose-400 hover:to-brand-orange-dark'
                                     }`}
                             >
@@ -155,8 +156,6 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
                                     </div>
                                 )}
                             </button>
-
-                            <ActionButtons place={place} uid={user?.uid} />
                         </div>
                     </div>
 
@@ -199,7 +198,7 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
                                 href={place.hotpepper.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 px-6 py-3 bg-[#FF0033] hover:bg-[#D9002B] text-white rounded-full transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                                className="inline-flex items-center gap-2 px-6 py-3 bg-[#FF0033] hover:bg-[#D9002B] text-brand-gray-dark rounded-full transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
                             >
                                 <span>ホットペッパーで予約</span>
                                 <ExternalLink className="w-4 h-4" />
@@ -211,10 +210,10 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
                             href={`https://tabelog.com/rstLst/?vs=1&sw=${encodeURIComponent(place.name)}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-[#FFC107] hover:bg-[#FFB300] text-white rounded-full transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                            className="inline-flex items-center gap-2 px-6 py-3 bg-[#FFC107] hover:bg-[#FFB300] text-brand-gray-dark rounded-full transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
                         >
                             <span>食べログで予約</span>
-                            <ExternalLink className="w-4 h-4 text-white" />
+                            <ExternalLink className="w-4 h-4 text-brand-gray-dark" />
                         </a>
                     </div>
 

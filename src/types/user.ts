@@ -44,7 +44,7 @@ export interface UserScenario {
         atmosphere: number;
         cost: number;
     };
-    
+
     updatedAt: Timestamp;
 }
 
@@ -54,6 +54,10 @@ export interface UserInteraction {
 
     isSaved: boolean; // Bookmark
     isVisited: boolean; // Visit flag (separate from Good/Bad)
+
+    // Visited Note (Scenario 2)
+    memo?: string; // Free text note
+    repeat?: 'yes' | 'no' | 'maybe'; // Simple future intent
 
     // Detailed Evaluation
     evaluation?: {
@@ -70,7 +74,7 @@ export interface UserInteraction {
 
         // The actual delta vector applied to the user profile (Global)
         // Renamed from impactVector for clarity, but keeping fallback logic if needed
-        embeddingImpact?: number[]; 
+        embeddingImpact?: number[];
 
         // The actual delta applied to axis preferences (Global)
         axisImpact?: {
