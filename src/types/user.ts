@@ -24,6 +24,9 @@ export interface UserProfile {
     favoriteAreas: string[];  // e.g. ["Shinjuku", "Ginza"]
     favoriteGenres: string[]; // e.g. ["Ramen", "Italian"]
 
+    // AI Proficiency (Gamification)
+    experience: number; // Global XP (Total interactions)
+
     // Legacy/Other
     createdAt: Timestamp;
     updatedAt: Timestamp;
@@ -33,6 +36,9 @@ export interface UserScenario {
     id: string;             // Auto-generated ID
     name: string;           // "一人メシ", "デート"
     isCustom: boolean;      // true if created by user
+
+    // AI Proficiency
+    experience: number;     // Tag Proficiency (Usage count)
 
     // Semantic Preference Vector (EMA Learned)
     preferenceVector?: number[]; // 768-dim vector

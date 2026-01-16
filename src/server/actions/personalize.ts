@@ -3,7 +3,7 @@
 import { getFirestore } from '@/lib/firebase/admin';
 import { Place } from '@/types/schema';
 import { UserProfile } from '@/types/user';
-import { calculatePlaceScore, ScoringMode, vecAdd, vecScale, vecZero } from '../services/scoring';
+import { calculatePlaceScore, ScoringMode, vecAdd, vecScale, vecZero, blendPreferences } from '../services/scoring';
 
 const db = getFirestore();
 
@@ -19,7 +19,8 @@ export interface PersonalizedScore {
 export interface PersonalizeOptions {
     mode?: ScoringMode;
     focusedAxes?: string[];
-    scenarioIds?: string[];
+    scenarioIds?: string[]; // Used for AI Tags (Vector Learning)
+    focusedScenes?: string[]; // Used for Fixed Scenes (Rule-based x3 Weighting)
 }
 
 export async function getPersonalizedScores(
@@ -31,7 +32,7 @@ export async function getPersonalizedScores(
 
     if (!placeIds || placeIds.length === 0) return results;
 
-    const { mode = 'auto', focusedAxes = [], scenarioIds = [] } = options;
+    const { mode = 'auto', focusedAxes = [], scenarioIds = [], focusedScenes = [] } = options;
 
     // 1. Fetch User Data (if needed for Auto Mode or fallback)
     let userProfile: UserProfile | null = null;
@@ -70,50 +71,18 @@ export async function getPersonalizedScores(
                     }
                 }
 
-                // --- 1. Vector Blending (Global 0.3 : Scenarios 0.7) ---
-                if (scenariosVectors.length > 0) {
-                    const dim = globalVector.length;
-                    let combinedSceneVector = vecZero(dim);
-                    scenariosVectors.forEach(v => {
-                        combinedSceneVector = vecAdd(combinedSceneVector, v);
-                    });
-                    combinedSceneVector = vecScale(combinedSceneVector, 1.0 / scenariosVectors.length);
+                // --- Integrated Blending (Vector & Axis) ---
+                const blended = blendPreferences(
+                    globalAxes,
+                    globalVector,
+                    scenariosVectors.map((v, i) => ({
+                        preferenceVector: v,
+                        aiPreferences: scenariosAxes[i] || { taste: 0, service: 0, atmosphere: 0, cost: 0 }
+                    }))
+                );
 
-                    targetVector = vecAdd(
-                        vecScale(globalVector, 0.3),
-                        vecScale(combinedSceneVector, 0.7)
-                    );
-                } else {
-                    targetVector = globalVector;
-                }
-
-                // --- 2. Axis Blending (Global 0.3 : Scenarios 0.7) ---
-                if (scenariosAxes.length > 0) {
-                    const combinedSceneAxes = { taste: 0, service: 0, atmosphere: 0, cost: 0 };
-
-                    // Average Scenario Axes
-                    scenariosAxes.forEach(axes => {
-                        combinedSceneAxes.taste += axes.taste;
-                        combinedSceneAxes.service += axes.service;
-                        combinedSceneAxes.atmosphere += axes.atmosphere;
-                        combinedSceneAxes.cost += axes.cost;
-                    });
-                    const count = scenariosAxes.length;
-                    combinedSceneAxes.taste /= count;
-                    combinedSceneAxes.service /= count;
-                    combinedSceneAxes.atmosphere /= count;
-                    combinedSceneAxes.cost /= count;
-
-                    // Blend with Global
-                    effectivePreferences = {
-                        taste: (globalAxes.taste * 0.3) + (combinedSceneAxes.taste * 0.7),
-                        service: (globalAxes.service * 0.3) + (combinedSceneAxes.service * 0.7),
-                        atmosphere: (globalAxes.atmosphere * 0.3) + (combinedSceneAxes.atmosphere * 0.7),
-                        cost: (globalAxes.cost * 0.3) + (combinedSceneAxes.cost * 0.7),
-                    };
-                } else {
-                    effectivePreferences = globalAxes;
-                }
+                targetVector = blended.targetVector;
+                effectivePreferences = blended.effectivePreferences;
 
             } else {
                 targetVector = globalVector;
@@ -141,7 +110,7 @@ export async function getPersonalizedScores(
             place,
             scoringProfile, // Use blended profile for calculation
             targetVector,
-            { mode, focusedAxes, focusedScenes: scenarioIds }
+            { mode, focusedAxes, focusedScenes } // Use explicit focusedScenes for Rule-based scoring
         );
 
         results[place.id] = {

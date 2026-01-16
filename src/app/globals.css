@@ -65,7 +65,7 @@ body {
 
   /* ボタン */
   .text-type-button {
-    @apply text-sm md:text-base font-bold;
+    @apply text-sm md:text-base font-semibold;
   }
 
   /* 視界に入れたく参考情報 */

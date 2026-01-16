@@ -5,6 +5,7 @@ import { UserInteraction, UserProfile, UserScenario } from '@/types/user';
 import { Place } from '@/types/schema';
 import { FieldValue } from 'firebase-admin/firestore';
 import { serializePlace } from '@/lib/utils/serialization';
+import { blendPreferences } from '../services/scoring';
 
 const db = getFirestore();
 
@@ -57,8 +58,7 @@ export async function submitEvaluation(
     uid: string,
     placeId: string,
     evaluation: UserInteraction['evaluation'] | null,
-    scenarioIds?: string[], // Optional: Custom Scenarios to update
-    skipGlobal: boolean = false // Optional: Skip global update
+    scenarioIds?: string[] // Optional: Custom Scenarios to update
 ) {
     if (!uid || !placeId) return;
 
@@ -66,7 +66,7 @@ export async function submitEvaluation(
     const placeRef = db.collection('places').doc(placeId);
     const interactionRef = userRef.collection('interactions').doc(placeId);
 
-    await db.runTransaction(async (t) => {
+    return await db.runTransaction(async (t) => {
         // 1. Initial Reads
         const userDoc = await t.get(userRef);
         const placeDoc = await t.get(placeRef);
@@ -114,10 +114,11 @@ export async function submitEvaluation(
 
         const currentAiPreferences = userData.aiPreferences || { taste: 0, service: 0, atmosphere: 0, cost: 0 };
         const nextAiPreferences = { ...currentAiPreferences };
+        let nextGlobalExperience = userData.experience || 0;
 
         // --- SCENARIO SETUP ---
         // Map to hold next state for scenarios
-        const nextScenarios = new Map<string, { vector: number[], ai: any }>();
+        const nextScenarios = new Map<string, { vector: number[], ai: any, experience: number }>();
 
         // Initialize from DB
         scenarioDocs.forEach((doc, id) => {
@@ -125,13 +126,15 @@ export async function submitEvaluation(
                 const data = doc.data() as UserScenario;
                 nextScenarios.set(id, {
                     vector: safeVector(data.preferenceVector),
-                    ai: { ...(data.aiPreferences || { taste: 0, service: 0, atmosphere: 0, cost: 0 }) }
+                    ai: { ...(data.aiPreferences || { taste: 0, service: 0, atmosphere: 0, cost: 0 }) },
+                    experience: data.experience || 0
                 });
             } else {
                 // FALLBACK
                 nextScenarios.set(id, {
                     vector: vecZero(DIMENSION),
-                    ai: { taste: 0, service: 0, atmosphere: 0, cost: 0 }
+                    ai: { taste: 0, service: 0, atmosphere: 0, cost: 0 },
+                    experience: 0
                 });
             }
         });
@@ -142,20 +145,18 @@ export async function submitEvaluation(
         if (prevData?.evaluation) {
             const prevEval = prevData.evaluation;
 
-            if (!skipGlobal) {
-                // 1-1. Undo Global Axis
-                if (prevEval.axisImpact) {
-                    (['taste', 'service', 'atmosphere', 'cost'] as const).forEach(key => {
-                        if (prevEval.axisImpact![key]) {
-                            nextAiPreferences[key] = Number((nextAiPreferences[key] - prevEval.axisImpact![key]).toFixed(4));
-                        }
-                    });
-                }
+            // 1-1. Undo Global Axis
+            if (prevEval.axisImpact) {
+                (['taste', 'service', 'atmosphere', 'cost'] as const).forEach(key => {
+                    if (prevEval.axisImpact![key]) {
+                        nextAiPreferences[key] = Number((nextAiPreferences[key] - prevEval.axisImpact![key]).toFixed(4));
+                    }
+                });
+            }
 
-                // 1-2. Undo Global Embedding
-                if (prevEval.embeddingImpact) {
-                    nextGlobalVector = vecSub(nextGlobalVector, prevEval.embeddingImpact);
-                }
+            // 1-2. Undo Global Embedding
+            if (prevEval.embeddingImpact) {
+                nextGlobalVector = vecSub(nextGlobalVector, prevEval.embeddingImpact);
             }
 
             // 1-3. Undo Scenarios
@@ -182,8 +183,8 @@ export async function submitEvaluation(
         // PHASE 2: APPLY NEW (Global & Scenarios)
         // ==========================================
 
-        let appliedGlobalAxisImpact = (skipGlobal && prevData?.evaluation?.axisImpact) ? prevData.evaluation.axisImpact : undefined;
-        let appliedGlobalEmbeddingImpact = (skipGlobal && prevData?.evaluation?.embeddingImpact) ? prevData.evaluation.embeddingImpact : undefined;
+        let appliedGlobalAxisImpact: any = undefined;
+        let appliedGlobalEmbeddingImpact: any = undefined;
         let appliedScenarioLog: Record<string, any> = {};
 
         if (evaluation) {
@@ -200,25 +201,23 @@ export async function submitEvaluation(
                     cost: axisScores.cost - 3.5
                 };
 
-                if (!skipGlobal) {
-                    // 2-1. Apply Global Axis
-                    appliedGlobalAxisImpact = { taste: 0, service: 0, atmosphere: 0, cost: 0 };
-                    (['taste', 'service', 'atmosphere', 'cost'] as const).forEach(key => {
-                        const delta = Number((axisDiffs[key] * AXIS_LEARNING_RATE * direction).toFixed(4));
-                        nextAiPreferences[key] = Number((nextAiPreferences[key] + delta).toFixed(4));
-                        appliedGlobalAxisImpact![key] = delta;
-                    });
+                // 2-1. Apply Global Axis
+                appliedGlobalAxisImpact = { taste: 0, service: 0, atmosphere: 0, cost: 0 };
+                (['taste', 'service', 'atmosphere', 'cost'] as const).forEach(key => {
+                    const delta = Number((axisDiffs[key] * AXIS_LEARNING_RATE * direction).toFixed(4));
+                    nextAiPreferences[key] = Number((nextAiPreferences[key] + delta).toFixed(4));
+                    appliedGlobalAxisImpact![key] = delta;
+                });
 
-                    // 2-2. Apply Global Embedding
-                    if (embeddingVector && embeddingVector.length > 0) {
-                        if (nextGlobalVector.length !== embeddingVector.length) nextGlobalVector = vecZero(embeddingVector.length);
+                // 2-2. Apply Global Embedding
+                if (embeddingVector && embeddingVector.length > 0) {
+                    if (nextGlobalVector.length !== embeddingVector.length) nextGlobalVector = vecZero(embeddingVector.length);
 
-                        const target = embeddingVector;
-                        const delta = vecScale(vecSub(target, nextGlobalVector), LEARNING_RATE_ALPHA);
+                    const target = embeddingVector;
+                    const delta = vecScale(vecSub(target, nextGlobalVector), LEARNING_RATE_ALPHA);
 
-                        nextGlobalVector = vecAdd(nextGlobalVector, delta);
-                        appliedGlobalEmbeddingImpact = delta;
-                    }
+                    nextGlobalVector = vecAdd(nextGlobalVector, delta);
+                    appliedGlobalEmbeddingImpact = delta;
                 }
 
                 // 2-3. Apply Scenarios
@@ -227,6 +226,9 @@ export async function submitEvaluation(
                         let scState = nextScenarios.get(id);
                         if (scState) {
                             const log: any = { axisImpact: {}, embeddingImpact: [] };
+
+                            // Usage XP
+                            scState.experience += 50; // +50 Tag XP (N=20 to Master)
 
                             // Apply Axis
                             (['taste', 'service', 'atmosphere', 'cost'] as const).forEach(key => {
@@ -249,6 +251,10 @@ export async function submitEvaluation(
                     });
                 }
             }
+
+            if (direction !== 0) {
+                nextGlobalExperience += 20; // +20 Global XP (N=50 to Master)
+            }
         }
 
         // ==========================================
@@ -256,13 +262,12 @@ export async function submitEvaluation(
         // ==========================================
 
         // 3-1. User Profile
-        if (!skipGlobal) {
-            t.update(userRef, {
-                aiPreferences: nextAiPreferences,
-                preferenceVector: nextGlobalVector,
-                updatedAt: FieldValue.serverTimestamp()
-            });
-        }
+        t.update(userRef, {
+            aiPreferences: nextAiPreferences,
+            preferenceVector: nextGlobalVector,
+            experience: nextGlobalExperience,
+            updatedAt: FieldValue.serverTimestamp()
+        });
 
         // 3-2. Interaction
         if (evaluation) {
@@ -298,6 +303,7 @@ export async function submitEvaluation(
             const updateData: any = {
                 aiPreferences: state.ai,
                 preferenceVector: state.vector,
+                experience: state.experience,
                 updatedAt: FieldValue.serverTimestamp()
             };
 
@@ -319,6 +325,36 @@ export async function submitEvaluation(
             // Use set with merge to handle both new and existing
             t.set(ref, updateData, { merge: true });
         });
+
+        // RETURN UPDATED DATA FOR UI FEEDBACK (Dual Radar Chart)
+        return {
+            globalPreferences: nextAiPreferences,
+            updatedScenarios: Array.from(nextScenarios.entries()).map(([id, state]) => ({
+                id,
+                aiPreferences: state.ai,
+                experience: state.experience // Needed for UI Feedback
+            })),
+            // Calculate Effective Preferences (Blended) for immediate UI feedback (e.g. List View Update)
+            effectivePreferences: (() => {
+                // Reconstruct scenario objects for blending
+                const scenarioObjs = Array.from(nextScenarios.entries())
+                    .filter(([id]) => (scenarioIds || []).includes(id)) // Only include currently active scenarios for effective calc? Or all? User likely wants "Current Context".
+                    .map(([_, state]) => ({
+                        aiPreferences: state.ai,
+                        preferenceVector: state.vector
+                    }));
+
+                // If no scenarios active, effective = global
+                if (scenarioObjs.length === 0) return nextAiPreferences;
+
+                return blendPreferences(
+                    nextAiPreferences,
+                    nextGlobalVector,
+                    scenarioObjs
+                ).effectivePreferences;
+            })(),
+            globalExperience: nextGlobalExperience // Return for UI
+        };
     });
 }
 
@@ -402,6 +438,7 @@ export async function createCustomScenario(uid: string, name: string) {
         isCustom: true,
         aiPreferences: { taste: 0, service: 0, atmosphere: 0, cost: 0 },
         preferenceVector: [], // Initialize empty
+        experience: 0, // Initialize XP
         updatedAt: FieldValue.serverTimestamp() as unknown as any // Cast for type safety with Client/Server types
     };
 
@@ -412,6 +449,25 @@ export async function createCustomScenario(uid: string, name: string) {
         ...newScenario,
         updatedAt: new Date()
     };
+}
+
+export async function deleteCustomScenario(uid: string, scenarioId: string) {
+    if (!uid || !scenarioId) throw new Error('Invalid arguments');
+
+    const scenarioRef = db.collection('users').doc(uid).collection('scenarios').doc(scenarioId);
+    const docSnap = await scenarioRef.get();
+
+    if (!docSnap.exists) {
+        throw new Error('Scenario not found');
+    }
+
+    const data = docSnap.data();
+    if (data?.isCustom !== true) {
+        throw new Error('Cannot delete default scenarios');
+    }
+
+    await scenarioRef.delete();
+    return { success: true, id: scenarioId };
 }
 
 export async function getUserScenarios(uid: string) {

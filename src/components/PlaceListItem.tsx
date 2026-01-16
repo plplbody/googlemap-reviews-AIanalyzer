@@ -151,7 +151,7 @@ export default function PlaceListItem({
                     </div>
                 )}
                 <div className="flex-grow min-w-0">
-                    <div className="pr-16 flex flex-col gap-1">
+                    <div className="flex flex-col gap-1">
                         <h3 className="text-type-subtitle font-bold text-brand-black-dark group-hover:text-brand-orange-dark transition-colors line-clamp-2 md:line-clamp-1 mb-1">
                             {place.name}
                         </h3>

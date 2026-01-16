@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Menu, X, Check, Heart, LogOut, User as UserIcon } from "lucide-react";
+import { Menu, X, Check, Heart, LogOut, User as UserIcon, Settings } from "lucide-react";
 
 interface HeaderProps {
     viewState: "HOME" | "LIST" | "DETAIL" | "PROFILE";
@@ -63,6 +63,14 @@ export default function Header({ viewState, onResetHome }: HeaderProps) {
                                     <p className="text-sm font-bold text-brand-black-dark truncate">{user.displayName}</p>
                                     <p className="text-xs text-brand-black truncate">{user.email}</p>
                                 </div>
+                                <Link
+                                    href="/settings/tags"
+                                    className="w-full text-left flex items-center gap-3 px-4 py-3 text-sm text-brand-black hover:bg-neutral-50 transition-colors"
+                                    onClick={() => setIsProfileMenuOpen(false)}
+                                >
+                                    <Settings className="w-4 h-4" />
+                                    AIタグ管理
+                                </Link>
                                 <button
                                     onClick={() => { signOut(); setIsProfileMenuOpen(false); }}
                                     className="w-full text-left flex items-center gap-3 px-4 py-3 text-sm text-rose-500 hover:bg-rose-50 transition-colors"
@@ -119,6 +127,14 @@ export default function Header({ viewState, onResetHome }: HeaderProps) {
                             >
                                 <Heart className="w-4 h-4 fill-white" />
                                 グルメノート
+                            </Link>
+
+                            <Link
+                                href="/settings/tags"
+                                className="text-left text-brand-black font-medium cursor-pointer flex items-center gap-2 pl-2 mt-2"
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                                <Settings className="w-4 h-4" /> AIタグ管理
                             </Link>
 
                             <button

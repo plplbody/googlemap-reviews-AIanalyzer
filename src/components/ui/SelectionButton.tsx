@@ -26,11 +26,11 @@ export function SelectionButton({
 
     // Variant specific styles
     const chipStyles = isSelected
-        ? "bg-brand-orange-dark text-brand-gray-dark border border-brand-orange-dark shadow-md transform scale-105 px-3 py-1.5 shadow-sm"
-        : "bg-white text-brand-black-light border border-brand-gray hover:border-brand-orange-dark hover:text-brand-orange-dark px-3 py-1.5 shadow-sm";
+        ? "bg-brand-orange text-brand-gray border border-brand-orange shadow-md transform scale-105 px-3 py-1.5 shadow-sm"
+        : "bg-white text-brand-black-light border border-brand-gray hover:border-brand-orange hover:text-brand-orange px-3 py-1.5 shadow-sm";
 
     const segmentStyles = isSelected
-        ? "bg-brand-orange-dark text-brand-gray-dark shadow-sm px-4 py-1.5"
+        ? "bg-brand-orange-dark text-brand-gray shadow-sm px-4 py-1.5"
         : "text-brand-black-light hover:bg-brand-gray-light hover:text-brand-orange-dark px-3 py-1.5";
 
     const disabledStyles = disabled

@@ -9,10 +9,10 @@ export function useUserInteractions(uid: string, placeId: string) {
     const [error, setError] = useState<string | null>(null);
 
     // Primary Action: Submit Evaluation (Good/Likely)
-    const evaluate = async (evaluation: UserInteraction['evaluation'] | null, scenarioIds?: string[], skipGlobal?: boolean) => {
+    const evaluate = async (evaluation: UserInteraction['evaluation'] | null, scenarioIds?: string[]) => {
         setIsLoading(true);
         try {
-            await submitEvaluation(uid, placeId, evaluation as any, scenarioIds, skipGlobal);
+            return await submitEvaluation(uid, placeId, evaluation as any, scenarioIds);
         } catch (e: any) {
             console.error(e);
             setError(e.message);
