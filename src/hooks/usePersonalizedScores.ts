@@ -9,7 +9,7 @@ interface UsePersonalizedScoresProps {
     focusedAxes: string[];
     focusedScenes: string[];
     focusedTags: string[];
-    places: Place[];
+    places: { id: string }[]; // Accept any object with an ID (Place or PlaceSearchResult)
 }
 
 export function usePersonalizedScores({

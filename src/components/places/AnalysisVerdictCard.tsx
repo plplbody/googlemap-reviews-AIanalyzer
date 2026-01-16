@@ -52,7 +52,7 @@ export function AnalysisVerdictCard({ place, personalScore }: AnalysisVerdictCar
     };
 
     return (
-        <div className="w-full bg-white rounded-3xl shadow-xl border border-brand-gray overflow-hidden">
+        <div className="w-full bg-white rounded-3xl shadow-md hover:shadow-lg border border-brand-gray overflow-hidden">
             {/* Header Stripe */}
             <div className="h-1.5 w-full bg-gradient-to-r from-brand-orange-dark via-rose-500 to-amber-500" />
 
@@ -147,7 +147,7 @@ export function AnalysisVerdictCard({ place, personalScore }: AnalysisVerdictCar
                     </div>
 
                     {place.gapReason && (
-                        <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 p-3 rounded-xl border border-amber-100">
+                        <div className="flex items-start gap-2 text-type-memo text-amber-700 bg-amber-50 p-3 rounded-xl border border-amber-100">
                             <TrendingUp className="w-4 h-4 shrink-0 mt-0.5" />
                             <span>{place.gapReason}</span>
                         </div>

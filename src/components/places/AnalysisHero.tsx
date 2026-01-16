@@ -41,8 +41,8 @@ export function AnalysisHero({ place }: AnalysisHeroProps) {
             {/* 1. Top Section: Title & Info with Background Image */}
             <div className="relative">
                 {/* Background Image / Overlay */}
-                <div className={`absolute inset-0 bg-cover bg-center ${!bgStyle ? 'bg-gradient-to-br from-orange-500 to-rose-500' : ''}`} style={bgStyle}>
-                    <div className="absolute inset-0 bg-black/60" />
+                <div className={`absolute inset-0 bg-cover bg-center ${!bgStyle ? 'bg-gradient-to-br from-brand-gray-dark via-brand-gray to-brand-orange' : ''}`} style={bgStyle}>
+                    <div className="absolute inset-0 bg-black/70" />
                 </div>
 
                 {/* Content Container */}
@@ -84,7 +84,7 @@ export function AnalysisHero({ place }: AnalysisHeroProps) {
                                     <div className="p-1 rounded-full bg-white/20 backdrop-blur-sm">
                                         <Train className="w-3.5 h-3.5" />
                                     </div>
-                                    <span>{place.hotpepper?.station || place.nearestStation || place.hotpepper?.access}</span>
+                                    <span>{place.nearestStation || '不明'}</span>
                                 </div>
                             )}
 
