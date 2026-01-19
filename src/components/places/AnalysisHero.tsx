@@ -39,87 +39,91 @@ export function AnalysisHero({ place }: AnalysisHeroProps) {
     return (
         <div className="w-full rounded-3xl overflow-hidden shadow-lg border border-brand-gray group bg-white">
             {/* 1. Top Section: Title & Info with Background Image */}
-            <div className="relative">
-                {/* Background Image / Overlay */}
-                <div className={`absolute inset-0 bg-cover bg-center ${!bgStyle ? 'bg-gradient-to-br from-brand-gray-dark via-brand-gray to-brand-orange' : ''}`} style={bgStyle}>
-                    <div className="absolute inset-0 bg-black/70" />
-                </div>
+            {/* 1. Top Section: Title & Info with Background Image */}
+            <div className="relative h-64 md:h-80 w-full bg-brand-gray-dark">
+                {/* Background Image */}
+                {place.hotpepper?.imageUrl ? (
+                    <img
+                        src={place.hotpepper.imageUrl}
+                        alt={place.name}
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        onError={(e) => (e.currentTarget.style.display = 'none')}
+                    />
+                ) : (
+                    <div className="absolute inset-0 flex items-center justify-center bg-brand-gray-light text-brand-black-light">
+                        <span className="text-sm font-bold">No Image</span>
+                    </div>
+                )}
 
-                {/* Content Container */}
-                <div className="relative z-10 p-6 md:p-8 text-white">
-                    {/* Main Title Area */}
-                    <div className="space-y-3">
-                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white leading-tight drop-shadow-md">
-                            {place.name}
-                        </h1>
+                {/* Gradient Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent pointer-events-none" />
 
-                        <div className="flex flex-col gap-2 text-type-memo text-brand-gray font-medium">
-                            {/* Price Range */}
-                            <div className="flex items-center gap-2">
-                                <div className="p-1 rounded-full bg-white/20 backdrop-blur-sm">
-                                    <Banknote className="w-3.5 h-3.5" />
-                                </div>
-                                <span>
-                                    {(() => {
-                                        if (place.priceRange?.startPrice || place.priceRange?.endPrice) {
-                                            const s = place.priceRange.startPrice?.units;
-                                            const e = place.priceRange.endPrice?.units;
-                                            return `${s ? '¥' + Number(s).toLocaleString() : ''}〜${e ? '¥' + Number(e).toLocaleString() : ''}`;
-                                        }
-                                        switch (place.priceLevel) {
-                                            case 'PRICE_LEVEL_FREE': return '無料';
-                                            case 'PRICE_LEVEL_INEXPENSIVE': return '〜¥1,000';
-                                            case 'PRICE_LEVEL_MODERATE': return '¥1,000〜¥3,000';
-                                            case 'PRICE_LEVEL_EXPENSIVE': return '¥3,000〜¥10,000';
-                                            case 'PRICE_LEVEL_VERY_EXPENSIVE': return '¥10,000〜';
-                                            default: return '予算不明';
-                                        }
-                                    })()}
-                                </span>
-                            </div>
+                {/* Content Container (Bottom Aligned) */}
+                <div className="absolute bottom-0 left-0 w-full p-6 md:p-8 z-10 text-white">
+                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white leading-tight drop-shadow-md mb-3">
+                        {place.name}
+                    </h1>
 
-                            {/* Station Info */}
-                            {(place.hotpepper?.station || place.nearestStation || place.hotpepper?.access) && (
+                    <div className="flex flex-col gap-2 text-white/95 font-medium text-sm md:text-base">
+                        {/* Price Range */}
+                        {(() => {
+                            let priceText = '';
+                            if (place.priceRange?.startPrice || place.priceRange?.endPrice) {
+                                const s = place.priceRange.startPrice?.units;
+                                const e = place.priceRange.endPrice?.units;
+                                priceText = `${s ? '¥' + Number(s).toLocaleString() : ''}〜${e ? '¥' + Number(e).toLocaleString() : ''}`;
+                            } else {
+                                switch (place.priceLevel) {
+                                    case 'PRICE_LEVEL_FREE': priceText = '無料'; break;
+                                    case 'PRICE_LEVEL_INEXPENSIVE': priceText = '〜¥1,000'; break;
+                                    case 'PRICE_LEVEL_MODERATE': priceText = '¥1,000〜¥3,000'; break;
+                                    case 'PRICE_LEVEL_EXPENSIVE': priceText = '¥3,000〜¥10,000'; break;
+                                    case 'PRICE_LEVEL_VERY_EXPENSIVE': priceText = '¥10,000〜'; break;
+                                    default: priceText = '予算不明'; break;
+                                }
+                            }
+                            return (
                                 <div className="flex items-center gap-2">
                                     <div className="p-1 rounded-full bg-white/20 backdrop-blur-sm">
-                                        <Train className="w-3.5 h-3.5" />
+                                        <Banknote className="w-3.5 h-3.5" />
                                     </div>
-                                    <span>{place.nearestStation || '不明'}</span>
+                                    <span>{priceText}</span>
                                 </div>
-                            )}
+                            );
+                        })()}
 
-                            {/* Address */}
+                        {/* Station Info */}
+                        {(place.hotpepper?.station || place.nearestStation || place.hotpepper?.access) && (
                             <div className="flex items-center gap-2">
                                 <div className="p-1 rounded-full bg-white/20 backdrop-blur-sm">
-                                    <MapPin className="w-3.5 h-3.5" />
+                                    <Train className="w-3.5 h-3.5" />
                                 </div>
-                                <div className='flex flex-col gap-1'>
-                                    <span>{place.address || '住所情報なし'}</span>
-                                    <a
-                                        href={`https://www.google.com/maps/search/?api=1&query=Google&query_place_id=${place.id}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-sky-300 hover:text-sky-500"
-                                    >
-                                        Google Mapで見る
-                                    </a>
-                                </div>
+                                <span>{place.nearestStation || place.hotpepper?.station || place.hotpepper?.access || '不明'}</span>
+                            </div>
+                        )}
 
+                        {/* Address */}
+                        <div className="flex items-center gap-2">
+                            <div className="p-1 rounded-full bg-white/20 backdrop-blur-sm">
+                                <MapPin className="w-3.5 h-3.5" />
+                            </div>
+                            <div className='flex items-center gap-3'>
+                                <a
+                                    href={`https://www.google.com/maps/search/?api=1&query=Google&query_place_id=${place.id}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-brand-orange-light hover:text-brand-orange underline text-xs md:text-sm"
+                                >
+                                    Google Map
+                                </a>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* 2. Middle Section: Badges (White Background) */}
-            <div className="bg-white px-4 py-2 border-brand-gray-light">
-                <div className="flex flex-wrap items-center gap-2">
-                    <PlaceBadges place={place} />
-                </div>
-            </div>
-
             {/* 3. Bottom Section: Action Buttons (White Background) */}
-            <div className="bg-white px-4 pt-2 pb-6 border-t border-brand-gray-light">
+            <div className="bg-white px-4 pt-4 pb-4 border-t border-brand-gray-light">
                 <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 justify-between">
                     {/* Left: User Actions */}
                     <div className="flex items-center gap-3">
@@ -127,7 +131,7 @@ export function AnalysisHero({ place }: AnalysisHeroProps) {
 
                         <button
                             onClick={() => toggleSelection(place)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all shadow-sm active:scale-95 ${isSelected
+                            className={`flex items-center gap-2 px-4 py-2 rounded-full text-type-button transition-all shadow-sm active:scale-95 ${isSelected
                                 ? 'bg-brand-orange text-white border border-brand-orange-light shadow-md'
                                 : 'bg-white border border-brand-gray text-brand-black hover:bg-brand-gray-light'
                                 }`}

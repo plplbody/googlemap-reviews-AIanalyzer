@@ -33,13 +33,15 @@ export function AnalysisVerdictCard({ place, personalScore }: AnalysisVerdictCar
     const circumference = 2 * Math.PI * radius;
     const strokeDashoffset = circumference - (finalScore / 5) * circumference;
 
-    // Custom Tick for Radar Chart to handle multiline and avoid overlap for top label
+    // Custom Tick for Radar Chart to handle multiline and avoid overlap for labels
     const CustomTick = ({ payload, x, y, textAnchor, stroke, radius }: any) => {
         const [subject, score] = payload.value.split(' ');
-        // "味" is typically at the top, so text growing downwards overlaps the chart.
-        // We shift it up to compensate.
+        // "味" (Top) overlap fix: Shift Up
         const isTop = subject.includes('味');
-        const yOffset = isTop ? -15 : 0;
+        // "雰囲気" (Bottom) overlap fix: Shift Down
+        const isBottom = subject.includes('雰囲気');
+
+        const yOffset = isTop ? -15 : (isBottom ? 10 : 0);
 
         return (
             <g className="recharts-layer recharts-polar-angle-axis-tick">
@@ -59,7 +61,7 @@ export function AnalysisVerdictCard({ place, personalScore }: AnalysisVerdictCar
             <div className="p-6 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
 
                 {/* 1. Left: AI Score & Radar Chart (Col Span 5 or 6) */}
-                <div className="lg:col-span-6 flex flex-row items-center justify-center gap-16 md:gap-8 border-b lg:border-b-0 lg:border-r border-gray-100 pb-6 lg:pb-0 lg:pr-6">
+                <div className="lg:col-span-6 flex flex-row items-center justify-center gap-8 md:gap-8 border-b lg:border-b-0 lg:border-r border-gray-100 pb-6 lg:pb-0 lg:pr-6">
                     {/* Circle Score */}
                     <div className="flex flex-col items-center gap-2 md:gap-4 shrink-0">
                         {/* Match & Label */}
@@ -99,9 +101,9 @@ export function AnalysisVerdictCard({ place, personalScore }: AnalysisVerdictCar
                     </div>
 
                     {/* Radar Chart (Next to Score) */}
-                    <div className="flex-1 w-full min-w-[140px] max-w-[200px] md:max-w-[240px] h-[160px] md:h-[200px] relative">
+                    <div className="flex-1 w-full min-w-[160px] max-w-[200px] md:max-w-[240px] h-[160px] md:h-[200px] relative">
                         <ResponsiveContainer width="100%" height="100%">
-                            <RadarChart cx="50%" cy="50%" outerRadius="65%" data={radarData}>
+                            <RadarChart cx="50%" cy="50%" outerRadius="55%" data={radarData}>
                                 <PolarGrid stroke="#e2e8f0" />
                                 <PolarAngleAxis
                                     dataKey="subject"

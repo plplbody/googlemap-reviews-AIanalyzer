@@ -16,14 +16,28 @@ export default function TagCreationForm({ uid, onSuccess, onCancel }: TagCreatio
     const [isLoading, setIsLoading] = useState(false);
 
     const handleCreate = async () => {
-        if (!tagName.trim()) return;
+        const trimmed = tagName.trim();
+        if (!trimmed) return;
+
+        if (trimmed.length > 20) {
+            alert("タグ名は20文字以内で入力してください");
+            return;
+        }
+
         setIsLoading(true);
         try {
-            const newScenario = await createCustomScenario(uid, tagName);
+            const newScenario = await createCustomScenario(uid, trimmed);
             onSuccess(newScenario as unknown as UserScenario);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to create tag", error);
-            alert("作成に失敗しました");
+            // Show specific error messages
+            if (error.message.includes('LimitReached')) {
+                alert("タグの作成上限(30個)に達しました。不要なタグを削除してください。");
+            } else if (error.message.includes('Duplicate')) {
+                alert("同じ名前のタグが既に存在します。");
+            } else {
+                alert("作成に失敗しました。もう一度お試しください。");
+            }
         } finally {
             setIsLoading(false);
         }

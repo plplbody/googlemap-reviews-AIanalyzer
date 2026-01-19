@@ -41,6 +41,11 @@ export default function MemoModal({ isOpen, onClose, onSave, initialMemo = '', i
     }, [isOpen, initialMemo, initialRepeat]);
 
     const handleSave = async () => {
+        if (memo.length > 500) {
+            alert("メモは500文字以内で入力してください");
+            return;
+        }
+
         setIsSaving(true);
         try {
             await onSave(memo, repeat);

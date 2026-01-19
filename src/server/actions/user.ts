@@ -429,8 +429,23 @@ function generateScenarioId(): string {
 export async function createCustomScenario(uid: string, name: string) {
     if (!uid || !name) throw new Error('Invalid arguments');
 
+    const scenariosRef = db.collection('users').doc(uid).collection('scenarios');
+
+    // 1. LIMIT CHECK
+    const snapshot = await scenariosRef.count().get();
+    if (snapshot.data().count >= 30) {
+        throw new Error('LimitReached: タグの作成上限(30個)に達しました');
+    }
+
+    // 2. DUPLICATE CHECK
+    // Note: This is a simple exact match check. 
+    const duplicateCheck = await scenariosRef.where('name', '==', name).limit(1).get();
+    if (!duplicateCheck.empty) {
+        throw new Error('Duplicate: 同じ名前のタグが既に存在します');
+    }
+
     const scenarioId = generateScenarioId();
-    const scenarioRef = db.collection('users').doc(uid).collection('scenarios').doc(scenarioId);
+    const scenarioRef = scenariosRef.doc(scenarioId);
 
     const newScenario: UserScenario = {
         id: scenarioId,
@@ -439,7 +454,7 @@ export async function createCustomScenario(uid: string, name: string) {
         aiPreferences: { taste: 0, service: 0, atmosphere: 0, cost: 0 },
         preferenceVector: [], // Initialize empty
         experience: 0, // Initialize XP
-        updatedAt: FieldValue.serverTimestamp() as unknown as any // Cast for type safety with Client/Server types
+        updatedAt: FieldValue.serverTimestamp() as unknown as any
     };
 
     await scenarioRef.set(newScenario);

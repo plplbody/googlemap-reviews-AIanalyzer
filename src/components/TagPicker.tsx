@@ -3,7 +3,6 @@ import { createCustomScenario, getUserScenarios } from '@/server/actions/user';
 import { UserScenario } from '@/types/user';
 import { Plus, X, Check, Sparkles } from 'lucide-react';
 import TagCreationForm from './TagCreationForm';
-import AITagChip from './AITagChip';
 
 export interface TagPickerProps {
     onSelect: (scenarioIds: string[], names: string[]) => void;
@@ -63,7 +62,7 @@ export default function TagPicker({ onSelect, onClose, uid }: TagPickerProps) {
     return (
         <div
             ref={pickerRef}
-            className="absolute bottom-full mb-2 left-0 z-[100] w-[90vw] max-w-90 bg-white rounded-xl shadow-xl border border-brand-gray-light overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200 origin-bottom-left"
+            className="absolute bottom-full mb-2 left-0 z-[100] w-[80vw] max-w-75 bg-white rounded-xl shadow-xl border border-brand-gray-light overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200 origin-bottom-left"
             onClick={(e) => e.stopPropagation()}
         >
             {/* Header */}
@@ -93,10 +92,8 @@ export default function TagPicker({ onSelect, onClose, uid }: TagPickerProps) {
                                     {scenarios.map((s) => {
                                         const isSelected = selectedTagIds.has(s.id);
                                         return (
-                                            <AITagChip
+                                            <button
                                                 key={s.id}
-                                                scenario={s}
-                                                selected={isSelected}
                                                 onClick={() => {
                                                     setSelectedTagIds(prev => {
                                                         const next = new Set(prev);
@@ -105,11 +102,18 @@ export default function TagPicker({ onSelect, onClose, uid }: TagPickerProps) {
                                                         return next;
                                                     });
                                                 }}
-                                                className='text-type-button'
-                                            />
+                                                className={`
+                          px-3 py-1.5 rounded-full border text-type-button transition-all flex items-center gap-1
+                          ${isSelected
+                                                        ? 'bg-brand-orange text-brand-gray border-brand-orange'
+                                                        : 'bg-white border-brand-gray-dark text-brand-black-light hover:border-brand-orange hover:text-brand-orange-dark'}
+                      `}
+                                            >
+                                                {s.name}
+                                                {isSelected && <Check className="w-3 h-3 text-brand-gray" />}
+                                            </button>
                                         );
-                                    })
-                                    }
+                                    })}
                                 </div>
                             </div>
                         ) : (
@@ -119,7 +123,7 @@ export default function TagPicker({ onSelect, onClose, uid }: TagPickerProps) {
                         <div className="flex gap-2 mt-4 pt-4 border-t border-brand-gray">
                             <button
                                 onClick={() => setIsCreating(true)}
-                                className="flex-1 py-2 rounded-lg border border-brand-gray-dark border-dashed text-brand-black-light hover:border-brand-orange hover:text-brand-orange  transition-all flex items-center justify-center gap-2 text-type-button"
+                                className="flex-1 py-2 rounded-lg border border-brand-gray-dark text-brand-black-light hover:border-brand-orange hover:text-brand-orange  transition-all flex items-center justify-center gap-2 text-type-button"
                             >
                                 <Plus className="w-3 h-3" />
                                 新規作成
