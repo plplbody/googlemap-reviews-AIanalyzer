@@ -24,6 +24,9 @@ export interface UserProfile {
     favoriteAreas: string[];  // e.g. ["Shinjuku", "Ginza"]
     favoriteGenres: string[]; // e.g. ["Ramen", "Italian"]
 
+    // AI Proficiency (Gamification)
+    experience: number; // Global XP (Total interactions)
+
     // Legacy/Other
     createdAt: Timestamp;
     updatedAt: Timestamp;
@@ -33,6 +36,9 @@ export interface UserScenario {
     id: string;             // Auto-generated ID
     name: string;           // "一人メシ", "デート"
     isCustom: boolean;      // true if created by user
+
+    // AI Proficiency
+    experience: number;     // Tag Proficiency (Usage count)
 
     // Semantic Preference Vector (EMA Learned)
     preferenceVector?: number[]; // 768-dim vector
@@ -44,7 +50,7 @@ export interface UserScenario {
         atmosphere: number;
         cost: number;
     };
-    
+
     updatedAt: Timestamp;
 }
 
@@ -54,6 +60,10 @@ export interface UserInteraction {
 
     isSaved: boolean; // Bookmark
     isVisited: boolean; // Visit flag (separate from Good/Bad)
+
+    // Visited Note (Scenario 2)
+    memo?: string; // Free text note
+    repeat?: 'yes' | 'no' | 'maybe'; // Simple future intent
 
     // Detailed Evaluation
     evaluation?: {
@@ -70,7 +80,7 @@ export interface UserInteraction {
 
         // The actual delta vector applied to the user profile (Global)
         // Renamed from impactVector for clarity, but keeping fallback logic if needed
-        embeddingImpact?: number[]; 
+        embeddingImpact?: number[];
 
         // The actual delta applied to axis preferences (Global)
         axisImpact?: {

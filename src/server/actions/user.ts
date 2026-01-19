@@ -5,11 +5,14 @@ import { UserInteraction, UserProfile, UserScenario } from '@/types/user';
 import { Place } from '@/types/schema';
 import { FieldValue } from 'firebase-admin/firestore';
 import { serializePlace } from '@/lib/utils/serialization';
+import { blendPreferences } from '../services/scoring';
 
 const db = getFirestore();
 
-// --- 1. Save/Bookmark Action ---
-export async function toggleSavePlace(uid: string, placeId: string, isSaved: boolean) {
+// --- 1. [REMOVED] Save/Bookmark Action ---
+// toggleSavePlace is deprecated. Use submitEvaluation with 'good' which implies saved.
+
+export async function toggleVisited(uid: string, placeId: string, isVisited: boolean) {
     if (!uid || !placeId) return;
 
     const interactionRef = db.collection('users').doc(uid).collection('interactions').doc(placeId);
@@ -17,13 +20,30 @@ export async function toggleSavePlace(uid: string, placeId: string, isSaved: boo
     await interactionRef.set({
         uid,
         placeId,
-        isSaved,
-        updatedAt: FieldValue.serverTimestamp() // Firestore Timestamp
+        isVisited,
+        updatedAt: FieldValue.serverTimestamp()
     }, { merge: true });
 }
 
-// --- 2. Evaluation / Personalization Action ---
-// Rewriting function to fetch interaction properly
+export async function updateInteractionMemo(
+    uid: string,
+    placeId: string,
+    memo?: string,
+    repeat?: 'yes' | 'no' | 'maybe'
+) {
+    if (!uid || !placeId) return;
+
+    const interactionRef = db.collection('users').doc(uid).collection('interactions').doc(placeId);
+
+    // Clean undefined values
+    const data: any = {
+        updatedAt: FieldValue.serverTimestamp()
+    };
+    if (memo !== undefined) data.memo = memo;
+    if (repeat !== undefined) data.repeat = repeat;
+
+    await interactionRef.set(data, { merge: true });
+}
 
 // --- 2. Evaluation / Personalization Action ---
 const LEARNING_RATE_ALPHA = 0.2; // Move 20% closer to the target per interaction
@@ -38,8 +58,7 @@ export async function submitEvaluation(
     uid: string,
     placeId: string,
     evaluation: UserInteraction['evaluation'] | null,
-    scenarioIds?: string[], // Optional: Custom Scenarios to update
-    skipGlobal: boolean = false // Optional: Skip global update
+    scenarioIds?: string[] // Optional: Custom Scenarios to update
 ) {
     if (!uid || !placeId) return;
 
@@ -47,7 +66,7 @@ export async function submitEvaluation(
     const placeRef = db.collection('places').doc(placeId);
     const interactionRef = userRef.collection('interactions').doc(placeId);
 
-    await db.runTransaction(async (t) => {
+    return await db.runTransaction(async (t) => {
         // 1. Initial Reads
         const userDoc = await t.get(userRef);
         const placeDoc = await t.get(placeRef);
@@ -95,10 +114,11 @@ export async function submitEvaluation(
 
         const currentAiPreferences = userData.aiPreferences || { taste: 0, service: 0, atmosphere: 0, cost: 0 };
         const nextAiPreferences = { ...currentAiPreferences };
+        let nextGlobalExperience = userData.experience || 0;
 
         // --- SCENARIO SETUP ---
         // Map to hold next state for scenarios
-        const nextScenarios = new Map<string, { vector: number[], ai: any }>();
+        const nextScenarios = new Map<string, { vector: number[], ai: any, experience: number }>();
 
         // Initialize from DB
         scenarioDocs.forEach((doc, id) => {
@@ -106,13 +126,15 @@ export async function submitEvaluation(
                 const data = doc.data() as UserScenario;
                 nextScenarios.set(id, {
                     vector: safeVector(data.preferenceVector),
-                    ai: { ...(data.aiPreferences || { taste: 0, service: 0, atmosphere: 0, cost: 0 }) }
+                    ai: { ...(data.aiPreferences || { taste: 0, service: 0, atmosphere: 0, cost: 0 }) },
+                    experience: data.experience || 0
                 });
             } else {
-                // FALLBACK: Auto-initialize if document doesn't exist (e.g. standard scenarios rarely created explicitly before first use)
+                // FALLBACK
                 nextScenarios.set(id, {
                     vector: vecZero(DIMENSION),
-                    ai: { taste: 0, service: 0, atmosphere: 0, cost: 0 }
+                    ai: { taste: 0, service: 0, atmosphere: 0, cost: 0 },
+                    experience: 0
                 });
             }
         });
@@ -123,20 +145,18 @@ export async function submitEvaluation(
         if (prevData?.evaluation) {
             const prevEval = prevData.evaluation;
 
-            if (!skipGlobal) {
-                // 1-1. Undo Global Axis
-                if (prevEval.axisImpact) {
-                    (['taste', 'service', 'atmosphere', 'cost'] as const).forEach(key => {
-                        if (prevEval.axisImpact![key]) {
-                            nextAiPreferences[key] = Number((nextAiPreferences[key] - prevEval.axisImpact![key]).toFixed(4));
-                        }
-                    });
-                }
+            // 1-1. Undo Global Axis
+            if (prevEval.axisImpact) {
+                (['taste', 'service', 'atmosphere', 'cost'] as const).forEach(key => {
+                    if (prevEval.axisImpact![key]) {
+                        nextAiPreferences[key] = Number((nextAiPreferences[key] - prevEval.axisImpact![key]).toFixed(4));
+                    }
+                });
+            }
 
-                // 1-2. Undo Global Embedding
-                if (prevEval.embeddingImpact) {
-                    nextGlobalVector = vecSub(nextGlobalVector, prevEval.embeddingImpact);
-                }
+            // 1-2. Undo Global Embedding
+            if (prevEval.embeddingImpact) {
+                nextGlobalVector = vecSub(nextGlobalVector, prevEval.embeddingImpact);
             }
 
             // 1-3. Undo Scenarios
@@ -163,24 +183,24 @@ export async function submitEvaluation(
         // PHASE 2: APPLY NEW (Global & Scenarios)
         // ==========================================
 
-        // Logs for Interaction
-        let appliedGlobalAxisImpact = (skipGlobal && prevData?.evaluation?.axisImpact) ? prevData.evaluation.axisImpact : undefined;
-        let appliedGlobalEmbeddingImpact = (skipGlobal && prevData?.evaluation?.embeddingImpact) ? prevData.evaluation.embeddingImpact : undefined;
+        let appliedGlobalAxisImpact: any = undefined;
+        let appliedGlobalEmbeddingImpact: any = undefined;
         let appliedScenarioLog: Record<string, any> = {};
 
         if (evaluation) {
+            // NOTE: Only 'good' type is supported now. 'bad' logic removed.
             const AXIS_LEARNING_RATE = 0.2;
-            const direction = evaluation.type === 'good' ? 1 : -1;
+            const direction = evaluation.type === 'good' ? 1 : 0; // Ignore bad, though UI shouldn't send it.
 
-            // Calculate Axis Diffs
-            const axisDiffs = {
-                taste: axisScores.taste - 3.5,
-                service: axisScores.service - 3.5,
-                atmosphere: axisScores.atmosphere - 3.5,
-                cost: axisScores.cost - 3.5
-            };
+            if (direction !== 0) {
+                // Calculate Axis Diffs
+                const axisDiffs = {
+                    taste: axisScores.taste - 3.5,
+                    service: axisScores.service - 3.5,
+                    atmosphere: axisScores.atmosphere - 3.5,
+                    cost: axisScores.cost - 3.5
+                };
 
-            if (!skipGlobal) {
                 // 2-1. Apply Global Axis
                 appliedGlobalAxisImpact = { taste: 0, service: 0, atmosphere: 0, cost: 0 };
                 (['taste', 'service', 'atmosphere', 'cost'] as const).forEach(key => {
@@ -191,56 +211,49 @@ export async function submitEvaluation(
 
                 // 2-2. Apply Global Embedding
                 if (embeddingVector && embeddingVector.length > 0) {
-                    // Ensure dimension match
                     if (nextGlobalVector.length !== embeddingVector.length) nextGlobalVector = vecZero(embeddingVector.length);
 
-                    const target = evaluation.type === 'good' ? embeddingVector : vecScale(embeddingVector, -0.5);
+                    const target = embeddingVector;
                     const delta = vecScale(vecSub(target, nextGlobalVector), LEARNING_RATE_ALPHA);
 
                     nextGlobalVector = vecAdd(nextGlobalVector, delta);
                     appliedGlobalEmbeddingImpact = delta;
                 }
+
+                // 2-3. Apply Scenarios
+                if (scenarioIds && scenarioIds.length > 0) {
+                    scenarioIds.forEach(id => {
+                        let scState = nextScenarios.get(id);
+                        if (scState) {
+                            const log: any = { axisImpact: {}, embeddingImpact: [] };
+
+                            // Usage XP
+                            scState.experience += 50; // +50 Tag XP (N=20 to Master)
+
+                            // Apply Axis
+                            (['taste', 'service', 'atmosphere', 'cost'] as const).forEach(key => {
+                                const delta = Number((axisDiffs[key] * AXIS_LEARNING_RATE * direction).toFixed(4));
+                                scState!.ai[key] = Number((scState!.ai[key] + delta).toFixed(4));
+                                log.axisImpact[key] = delta;
+                            });
+
+                            // Apply Embedding
+                            if (embeddingVector && embeddingVector.length > 0) {
+                                if (scState.vector.length !== embeddingVector.length) scState.vector = vecZero(embeddingVector.length);
+                                const target = embeddingVector;
+                                const delta = vecScale(vecSub(target, scState.vector), LEARNING_RATE_ALPHA);
+                                scState.vector = vecAdd(scState.vector, delta);
+                                log.embeddingImpact = delta;
+                            }
+
+                            appliedScenarioLog[id] = log;
+                        }
+                    });
+                }
             }
 
-            // 2-3. Apply Scenarios (Only for requested IDs)
-            if (scenarioIds && scenarioIds.length > 0) {
-                scenarioIds.forEach(id => {
-                    // Get or Init Scenario State
-                    // (Should exist if user passed valid ID, or just created)
-                    // If not fetched (e.g. newly created and not yet in DB?), handles gracefully?
-                    // The 'createCustomScenario' action creates it first, so it should exist.
-                    // If scenarioIds contains something not in scenarioDocs (because it didn't exist), we skip or init?
-                    // We rely on scenarioDocs.
-
-                    let scState = nextScenarios.get(id);
-                    // Critical: If new scenario (just created), it might be in scenarioDocs
-                    if (!scState && scenarioDocs.has(id)) {
-                        // It was fetched but empty? No, handled in init loop.
-                        // If not in nextScenarios, it means doc didn't exist?
-                    }
-
-                    if (scState) {
-                        const log: any = { axisImpact: {}, embeddingImpact: [] };
-
-                        // Apply Axis
-                        (['taste', 'service', 'atmosphere', 'cost'] as const).forEach(key => {
-                            const delta = Number((axisDiffs[key] * AXIS_LEARNING_RATE * direction).toFixed(4));
-                            scState!.ai[key] = Number((scState!.ai[key] + delta).toFixed(4));
-                            log.axisImpact[key] = delta;
-                        });
-
-                        // Apply Embedding
-                        if (embeddingVector && embeddingVector.length > 0) {
-                            if (scState.vector.length !== embeddingVector.length) scState.vector = vecZero(embeddingVector.length);
-                            const target = evaluation.type === 'good' ? embeddingVector : vecScale(embeddingVector, -0.5);
-                            const delta = vecScale(vecSub(target, scState.vector), LEARNING_RATE_ALPHA);
-                            scState.vector = vecAdd(scState.vector, delta);
-                            log.embeddingImpact = delta;
-                        }
-
-                        appliedScenarioLog[id] = log;
-                    }
-                });
+            if (direction !== 0) {
+                nextGlobalExperience += 20; // +20 Global XP (N=50 to Master)
             }
         }
 
@@ -249,33 +262,34 @@ export async function submitEvaluation(
         // ==========================================
 
         // 3-1. User Profile
-        if (!skipGlobal) {
-            t.update(userRef, {
-                aiPreferences: nextAiPreferences,
-                preferenceVector: nextGlobalVector,
-                updatedAt: FieldValue.serverTimestamp()
-            });
-        }
+        t.update(userRef, {
+            aiPreferences: nextAiPreferences,
+            preferenceVector: nextGlobalVector,
+            experience: nextGlobalExperience,
+            updatedAt: FieldValue.serverTimestamp()
+        });
 
         // 3-2. Interaction
         if (evaluation) {
             t.set(interactionRef, {
                 uid,
                 placeId,
-                isVisited: true,
+                isVisited: prevData?.isVisited || false, // Preserve visit status
+                isSaved: true, // "Good" implies Saved
                 evaluation: {
                     ...evaluation,
                     axisImpact: appliedGlobalAxisImpact,
                     embeddingImpact: appliedGlobalEmbeddingImpact,
-                    scenarioLog: appliedScenarioLog, // NEW
+                    scenarioLog: appliedScenarioLog,
                     timestamp: FieldValue.serverTimestamp()
                 },
                 updatedAt: FieldValue.serverTimestamp()
             }, { merge: true });
         } else {
-            // Removal
+            // Removal (Ungood)
             t.update(interactionRef, {
                 evaluation: FieldValue.delete(),
+                isSaved: false, // Ungood implies unsaved
                 updatedAt: FieldValue.serverTimestamp()
             });
         }
@@ -289,6 +303,7 @@ export async function submitEvaluation(
             const updateData: any = {
                 aiPreferences: state.ai,
                 preferenceVector: state.vector,
+                experience: state.experience,
                 updatedAt: FieldValue.serverTimestamp()
             };
 
@@ -310,41 +325,67 @@ export async function submitEvaluation(
             // Use set with merge to handle both new and existing
             t.set(ref, updateData, { merge: true });
         });
+
+        // RETURN UPDATED DATA FOR UI FEEDBACK (Dual Radar Chart)
+        return {
+            globalPreferences: nextAiPreferences,
+            updatedScenarios: Array.from(nextScenarios.entries()).map(([id, state]) => ({
+                id,
+                aiPreferences: state.ai,
+                experience: state.experience // Needed for UI Feedback
+            })),
+            // Calculate Effective Preferences (Blended) for immediate UI feedback (e.g. List View Update)
+            effectivePreferences: (() => {
+                // Reconstruct scenario objects for blending
+                const scenarioObjs = Array.from(nextScenarios.entries())
+                    .filter(([id]) => (scenarioIds || []).includes(id)) // Only include currently active scenarios for effective calc? Or all? User likely wants "Current Context".
+                    .map(([_, state]) => ({
+                        aiPreferences: state.ai,
+                        preferenceVector: state.vector
+                    }));
+
+                // If no scenarios active, effective = global
+                if (scenarioObjs.length === 0) return nextAiPreferences;
+
+                return blendPreferences(
+                    nextAiPreferences,
+                    nextGlobalVector,
+                    scenarioObjs
+                ).effectivePreferences;
+            })(),
+            globalExperience: nextGlobalExperience // Return for UI
+        };
     });
 }
 
 
 // --- 3. Fetch User Interactions (Profile) ---
-export async function getUserInteractions(uid: string) {
+export interface InteractionItem {
+    place: Place;
+    interaction: UserInteraction;
+}
+
+export async function getUserInteractions(uid: string): Promise<InteractionItem[]> {
     const db = getFirestore();
-    if (!uid) return { saved: [], good: [], bad: [] };
+    if (!uid) return [];
 
     try {
         const interactionsRef = db.collection('users').doc(uid).collection('interactions');
         const snapshot = await interactionsRef.get();
 
-        if (snapshot.empty) return { saved: [], good: [], bad: [] };
+        if (snapshot.empty) return [];
 
         const interactions = snapshot.docs.map(doc => doc.data() as UserInteraction);
+        const placeIds = interactions.map(i => i.placeId);
 
-        // Group by type
-        const savedIds = interactions.filter(i => i.isSaved).map(i => i.placeId);
-        const goodIds = interactions.filter(i => i.evaluation?.type === 'good').map(i => i.placeId);
-        const badIds = interactions.filter(i => i.evaluation?.type === 'bad').map(i => i.placeId);
+        if (placeIds.length === 0) return [];
 
-        // Unique IDs to fetch
-        const allIds = Array.from(new Set([...savedIds, ...goodIds, ...badIds]));
-
-        if (allIds.length === 0) return { saved: [], good: [], bad: [] };
-
-        // Firestore 'in' limit is 30. Using getAll to fetch documents by reference.
-        const placeRefs = allIds.map(id => db.collection('places').doc(id));
+        const placeRefs = placeIds.map(id => db.collection('places').doc(id));
         const placeSnapshots = await db.getAll(...placeRefs);
 
         const placesMap = new Map<string, Place>();
         placeSnapshots.forEach(snap => {
             if (snap.exists) {
-                // Manually cast or validate. Usually snap.data() is sufficient.
                 const data = snap.data();
                 if (data) {
                     placesMap.set(snap.id, { ...data, id: snap.id } as Place);
@@ -352,11 +393,25 @@ export async function getUserInteractions(uid: string) {
             }
         });
 
-        const saved = savedIds.map(id => placesMap.get(id)).filter((p): p is Place => !!p).map(serializePlace);
-        const good = goodIds.map(id => placesMap.get(id)).filter((p): p is Place => !!p).map(serializePlace);
-        const bad = badIds.map(id => placesMap.get(id)).filter((p): p is Place => !!p).map(serializePlace);
+        const results: InteractionItem[] = [];
+        interactions.forEach(interaction => {
+            const place = placesMap.get(interaction.placeId);
+            if (place) {
+                results.push({
+                    place: serializePlace(place),
+                    interaction: {
+                        ...interaction,
+                        updatedAt: (interaction.updatedAt as any)?.toDate?.() || new Date(),
+                        evaluation: interaction.evaluation ? {
+                            ...interaction.evaluation,
+                            timestamp: (interaction.evaluation.timestamp as any)?.toDate?.() || new Date()
+                        } : undefined
+                    } as any
+                });
+            }
+        });
 
-        return { saved, good, bad };
+        return results;
 
     } catch (error) {
         console.error("Failed to get user interactions:", error);
@@ -374,8 +429,23 @@ function generateScenarioId(): string {
 export async function createCustomScenario(uid: string, name: string) {
     if (!uid || !name) throw new Error('Invalid arguments');
 
+    const scenariosRef = db.collection('users').doc(uid).collection('scenarios');
+
+    // 1. LIMIT CHECK
+    const snapshot = await scenariosRef.count().get();
+    if (snapshot.data().count >= 30) {
+        throw new Error('LimitReached: タグの作成上限(30個)に達しました');
+    }
+
+    // 2. DUPLICATE CHECK
+    // Note: This is a simple exact match check. 
+    const duplicateCheck = await scenariosRef.where('name', '==', name).limit(1).get();
+    if (!duplicateCheck.empty) {
+        throw new Error('Duplicate: 同じ名前のタグが既に存在します');
+    }
+
     const scenarioId = generateScenarioId();
-    const scenarioRef = db.collection('users').doc(uid).collection('scenarios').doc(scenarioId);
+    const scenarioRef = scenariosRef.doc(scenarioId);
 
     const newScenario: UserScenario = {
         id: scenarioId,
@@ -383,7 +453,8 @@ export async function createCustomScenario(uid: string, name: string) {
         isCustom: true,
         aiPreferences: { taste: 0, service: 0, atmosphere: 0, cost: 0 },
         preferenceVector: [], // Initialize empty
-        updatedAt: FieldValue.serverTimestamp() as unknown as any // Cast for type safety with Client/Server types
+        experience: 0, // Initialize XP
+        updatedAt: FieldValue.serverTimestamp() as unknown as any
     };
 
     await scenarioRef.set(newScenario);
@@ -393,6 +464,25 @@ export async function createCustomScenario(uid: string, name: string) {
         ...newScenario,
         updatedAt: new Date()
     };
+}
+
+export async function deleteCustomScenario(uid: string, scenarioId: string) {
+    if (!uid || !scenarioId) throw new Error('Invalid arguments');
+
+    const scenarioRef = db.collection('users').doc(uid).collection('scenarios').doc(scenarioId);
+    const docSnap = await scenarioRef.get();
+
+    if (!docSnap.exists) {
+        throw new Error('Scenario not found');
+    }
+
+    const data = docSnap.data();
+    if (data?.isCustom !== true) {
+        throw new Error('Cannot delete default scenarios');
+    }
+
+    await scenarioRef.delete();
+    return { success: true, id: scenarioId };
 }
 
 export async function getUserScenarios(uid: string) {

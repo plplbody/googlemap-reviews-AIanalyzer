@@ -32,7 +32,7 @@ export default function PlaceList({ places, onSelect, onLoadMore, hasMore, loadi
                 {isScoreOutdated && onRecalculate && (
                     <button
                         onClick={onRecalculate}
-                        className="px-6 py-2 bg-brand-orange-dark text-white text-sm font-bold rounded-full hover:bg-brand-orange-dark/90 transition-all duration-300 shadow-md flex items-center gap-2 shrink-0 animate-in fade-in zoom-in"
+                        className="px-6 py-2 bg-brand-orange-dark text-brand-gray-dark text-sm font-bold rounded-full hover:bg-brand-orange-dark/90 transition-all duration-300 shadow-md flex items-center gap-2 shrink-0 animate-in fade-in zoom-in"
                     >
                         <RefreshCw className="w-4 h-4" />
                         スコア再計算

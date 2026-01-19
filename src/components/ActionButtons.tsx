@@ -1,191 +1,211 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Place } from '@/types/schema';
 import { useUserInteractions } from '@/hooks/useUserInteractions';
 import { useUserInteractionStatus } from '@/hooks/useUserInteractionStatus';
 
-import { Bookmark, ThumbsUp, ThumbsDown, Loader2 } from 'lucide-react';
-import { ScenePicker } from './ScenePicker';
+import { Heart } from 'lucide-react';
+import TagPicker from './TagPicker';
+import LearningFeedbackPopup from './LearningFeedbackPopup';
 
 interface ActionButtonsProps {
     place: Place;
     uid?: string;
-    onActionComplete?: () => void;
+    onActionComplete?: (effectivePreferences?: any) => void;
 }
 
 export function ActionButtons({ place, uid, onActionComplete }: ActionButtonsProps) {
-    const { toggleSave, evaluate, isLoading } = useUserInteractions(uid || '', place.id);
+    const { evaluate, isLoading } = useUserInteractions(uid || '', place.id);
     const { interaction, loading: isStatusLoading } = useUserInteractionStatus(uid || '', place.id);
 
     // Sync with DB state, but allow local override for optimistic UI
-    const [optimisticSaved, setOptimisticSaved] = useState<boolean | null>(null);
+    // We treat "Good" evaluation as the source of truth for "Liked/Saved"
     const [optimisticEval, setOptimisticEval] = useState<'good' | 'bad' | null | undefined>(undefined);
 
-    // Derived state: Local > Server > Default
-    const isSaved = optimisticSaved !== null ? optimisticSaved : (interaction?.isSaved || false);
+    // Derived state
     const lastEvaluation = optimisticEval !== undefined ? optimisticEval : (interaction?.evaluation?.type || null);
+    const isLiked = lastEvaluation === 'good';
+    // Server state for reference (to decide if we need to send "Delete")
+    const serverLiked = interaction?.evaluation?.type === 'good';
 
+    const [showTagPicker, setShowTagPicker] = useState(false);
 
+    // Feedback handling
+    const [feedbackData, setFeedbackData] = useState<{
+        global: any;
+        tag: any;
+        tagName: string;
+        globalExperience?: number;
+        tagExperience?: number;
+        isTagLevelUp?: boolean;
+        isGlobalLevelUp?: boolean;
+    } | null>(null);
 
-    // Toast State
-    const [showToast, setShowToast] = useState(false);
-    const [showScenePicker, setShowScenePicker] = useState(false);
+    const hasSelectedTags = useRef(false);
 
-    const handleSaveClick = async () => {
+    const handleHeartClick = async () => {
         if (!uid) {
             alert('ログインが必要です');
             return;
         }
+
+        const nextState = !isLiked;
 
         // Optimistic Update
-        const nextState = !isSaved;
-        setOptimisticSaved(nextState);
+        setOptimisticEval(nextState ? 'good' : null);
 
-        try {
-            await toggleSave(isSaved); // Pass OLD state as per hook contract
-            onActionComplete?.();
-        } catch (e) {
-            // Revert on error
-            setOptimisticSaved(!nextState);
-            console.error(e);
-        }
-    };
+        if (nextState) {
+            // Liked: Open Picker
+            // DEFER SAVE: We wait for user to select tag or dismiss picker
+            setShowTagPicker(true);
+            hasSelectedTags.current = false; // Reset
+        } else {
+            // Unliked: Cancel
+            setShowTagPicker(false);
 
-    const handleEvaluationClick = async (type: 'good' | 'bad') => {
-        if (!uid) {
-            alert('ログインが必要です');
-            return;
-        }
-
-        // Toggle Logic
-        if (lastEvaluation === type) {
-            // Remove evaluation
-            setOptimisticEval(null);
-            try {
-                // @ts-ignore
-                await evaluate(null);
-                onActionComplete?.();
-            } catch (e) {
-                setOptimisticEval(type); // Revert
-                console.error(e);
+            // Only send request if server actually has it saved
+            if (serverLiked) {
+                try {
+                    // @ts-ignore
+                    await evaluate(null);
+                    onActionComplete?.(); // Notify parent (List View update)
+                } catch (e) {
+                    console.error("Failed to unlike", e);
+                    setOptimisticEval('good'); // Revert
+                }
             }
-            return;
-        }
-
-        // Apply Evaluation (Good or Bad) directly
-        setOptimisticEval(type);
-        if (type === 'good') {
-            setShowToast(true);
-            setTimeout(() => setShowToast(false), 3000);
-            setShowScenePicker(true);
-        }
-
-        try {
-            await evaluate({
-                type: type,
-                timestamp: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 } as any,
-                selectedFeatureKeys: [], // No longer using feature selection
-                negativeFeedback: undefined
-            });
-            onActionComplete?.();
-        } catch (e) {
-            setOptimisticEval(undefined);
-            console.error(e);
         }
     };
 
     // Reset optimistic state when server state updates
     useEffect(() => {
         if (interaction !== undefined) {
-            setOptimisticSaved(null);
             setOptimisticEval(undefined);
         }
     }, [interaction]);
 
-    const handleSceneSelect = async (scenarioIds: string[]) => {
+    // Common function to finalize evaluation
+    const submitEvaluation = async (scenarioIds: string[], tagNames?: string[]) => {
         try {
-            // Second pass: Apply to specific scenarios, skipping global
-            await evaluate({
+            // @ts-ignore
+            const res = await evaluate({
                 type: 'good',
                 timestamp: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 } as any,
                 selectedFeatureKeys: [],
                 negativeFeedback: undefined
-            }, scenarioIds, true);
-            // Re-trigger toast for feedback
-            setShowToast(true);
-            setTimeout(() => setShowToast(false), 3000);
+            }, scenarioIds);
+
+            if (res) {
+                if (scenarioIds.length > 0 && res.updatedScenarios) {
+                    // Tagged Feedback
+                    const selectedScenarios = res.updatedScenarios.filter((s: any) => scenarioIds.includes(s.id));
+                    if (selectedScenarios.length > 0) {
+                        const blendedPref = { taste: 0, service: 0, atmosphere: 0, cost: 0 };
+                        selectedScenarios.forEach((s: any) => {
+                            blendedPref.taste += s.aiPreferences.taste;
+                            blendedPref.service += s.aiPreferences.service;
+                            blendedPref.atmosphere += s.aiPreferences.atmosphere;
+                            blendedPref.cost += s.aiPreferences.cost;
+                        });
+                        const count = selectedScenarios.length;
+                        blendedPref.taste /= count;
+                        blendedPref.service /= count;
+                        blendedPref.atmosphere /= count;
+                        blendedPref.cost /= count;
+
+                        setFeedbackData({
+                            global: res.globalPreferences,
+                            tag: blendedPref,
+                            tagName: (tagNames && tagNames.length > 1) ? `${tagNames[0]} 他${tagNames.length - 1}件` : (tagNames?.[0] || 'タグ'),
+                            globalExperience: res.globalExperience,
+                            tagExperience: selectedScenarios[0]?.experience, // Use primary tag XP
+                            isTagLevelUp: (selectedScenarios[0]?.experience || 0) % 100 === 0, // Simple heuristic: Since increments are 100, exact multiples mean we just crossed a boundary.
+                            isGlobalLevelUp: res.globalExperience % 100 === 0 // Global increments are +20. If we hit 100, we leveled up.
+                        });
+                    }
+                } else if (res.globalPreferences) {
+                    // Generic Feedback
+                    setFeedbackData({
+                        global: res.globalPreferences,
+                        tag: undefined,
+                        tagName: '好みを学習',
+                        globalExperience: res.globalExperience,
+                        isGlobalLevelUp: res.globalExperience % 100 === 0
+                    });
+                }
+                onActionComplete?.(res.effectivePreferences);
+            }
         } catch (e) {
-            console.error("Failed to update scenario", e);
+            console.error("Failed to submit evaluation", e);
+            setOptimisticEval(null); // Revert on failure
         }
     };
 
-    if (isStatusLoading || isLoading) {
-        // Optional: Show loading state or just keep buttons disabled / neutral
-    }
+    const handleTagSelect = async (scenarioIds: string[], tagNames: string[]) => {
+        hasSelectedTags.current = true;
+        await submitEvaluation(scenarioIds, tagNames);
+    };
+
+    // Handle closing behavior
+    const handlePickerClose = () => {
+        setShowTagPicker(false);
+
+        // If closed without selection, trigger Generic Save
+        // Check if we are still in "Liked" state (User didn't toggle off while picker was open)
+        // And check if we haven't already selected tags
+        if (!hasSelectedTags.current && optimisticEval === 'good') {
+            // If we haven't saved to server yet (or strictly, if this is the pending like action)
+            // We just save Generic.
+            submitEvaluation([], undefined);
+        }
+    };
+
+    // Cleanup: If component unmounts while pending, this is tricky. 
+    // We rely on handlePickerClose being called or explicit interactions.
 
     return (
         <div className="relative">
-            {/* Scene Picker */}
-            {showScenePicker && uid && (
-                <ScenePicker
-                    uid={uid}
-                    onSelect={handleSceneSelect}
-                    onClose={() => setShowScenePicker(false)}
+            {/* Feedback Popup */}
+            {feedbackData && (
+                <LearningFeedbackPopup
+                    globalPreferences={feedbackData.global}
+                    tagPreferences={feedbackData.tag}
+                    tagName={feedbackData.tagName}
+                    globalExperience={feedbackData.globalExperience}
+                    tagExperience={feedbackData.tagExperience}
+                    isTagLevelUp={feedbackData.isTagLevelUp}
+                    isGlobalLevelUp={feedbackData.isGlobalLevelUp}
+                    onClose={() => setFeedbackData(null)}
                 />
             )}
 
-            {/* Toast Message */}
-            {showToast && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 whitespace-nowrap px-4 py-2 bg-brand-black-dark text-white text-xs font-bold rounded-full shadow-lg animate-in fade-in slide-in-from-bottom-2 z-50">
-                    あなたの好みを学習しました！
-                </div>
+            {/* Tag Picker (Toast) */}
+            {showTagPicker && uid && (
+                <TagPicker
+                    uid={uid}
+                    onSelect={handleTagSelect}
+                    onClose={handlePickerClose}
+                />
             )}
 
-            <div className="flex items-center gap-2">
-                {/* Save Button */}
-                <button
-                    onClick={handleSaveClick}
-                    className={`p-2 rounded-full border shadow-sm transition-all active:scale-95 ${isSaved
-                        ? 'hover:bg-orange-100 border-orange-100 text-brand-orange' // Filled
-                        : 'bg-white border-brand-gray text-brand-black hover:bg-orange-100 hover:text-brand-orange'
-                        }`}
-                    title="保存（マイリスト）"
-                >
-                    <Bookmark size={20} className={isSaved ? "fill-current" : ""} />
-                </button>
-
-                {/* Evaluation Buttons Group */}
-                <div className="flex items-center rounded-full border border-brand-gray bg-white shadow-sm p-1">
-                    {/* Good */}
-                    <button
-                        onClick={() => handleEvaluationClick('good')}
-                        disabled={isLoading}
-                        className={`p-2 rounded-full transition-colors flex items-center justify-center ${lastEvaluation === 'good'
-                            ? 'hover:bg-orange-100 border-orange-100 text-brand-orange'
-                            : 'bg-white text-brand-black hover:bg-orange-100 hover:text-brand-orange'
-                            }`}
-                        title="Good / 好み"
-                    >
-                        <ThumbsUp size={20} className={lastEvaluation === 'good' ? "fill-current" : ""} />
-                    </button>
-
-                    <div className="w-px h-6 bg-brand-gray mx-1" />
-
-                    {/* Bad */}
-                    <button
-                        onClick={() => handleEvaluationClick('bad')}
-                        disabled={isLoading}
-                        className={`p-2 rounded-full transition-colors flex items-center justify-center ${lastEvaluation === 'bad'
-                            ? 'hover:bg-brand-gray text-brand-black-dark'
-                            : 'text-brand-black hover:bg-brand-gray hover:text-brand-black-dark'
-                            }`}
-                        title="Bad / 合わない"
-                    >
-                        <ThumbsDown size={20} className={lastEvaluation === 'bad' ? "fill-current" : ""} />
-                    </button>
+            {/* Heart Button */}
+            <button
+                onClick={handleHeartClick}
+                disabled={isLoading}
+                className={`p-2.5 rounded-full shadow-sm transition-all active:scale-95 flex items-center justify-center ${isLiked
+                    ? 'bg-rose-50 text-rose-500 border border-rose-200'
+                    : 'bg-white text-brand-black-light border border-brand-gray-dark hover:text-rose-400 hover:border-rose-200'
+                    }`}
+                title={isLiked ? "「気になる」から外す" : "気になる！（好みを学習）"}
+            >
+                <div className="relative">
+                    <Heart
+                        className={`w-6 h-6 transition-all ${isLiked ? "fill-current scale-110 drop-shadow-sm" : "scale-100"}`}
+                        strokeWidth={isLiked ? 0 : 2}
+                    />
                 </div>
-            </div>
+            </button>
         </div>
     );
 }

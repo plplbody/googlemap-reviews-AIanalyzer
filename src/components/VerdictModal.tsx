@@ -8,40 +8,90 @@ import { X, Crown, Trophy, Quote, ThumbsUp, ThumbsDown, Utensils, Heart, Sparkle
 export function VerdictModal() {
     const { verdict, setVerdict, selectedPlaces } = useComparison();
 
-    if (!verdict) return null;
+    const dialogRef = React.useRef<HTMLDialogElement>(null);
 
+    // 1. Move Hooks to top level (Fix: hook order error)
     // Sort places by match score (Descending)
-    const sortedPlaces = [...selectedPlaces].sort((a, b) => {
-        const scoreA = verdict.scores?.[a.id] || 0;
-        const scoreB = verdict.scores?.[b.id] || 0;
-        return scoreB - scoreA;
-    });
+    const sortedPlaces = React.useMemo(() => {
+        if (!verdict) return [];
+        return [...selectedPlaces].sort((a, b) => {
+            const scoreA = verdict.scores?.[a.id] || 0;
+            const scoreB = verdict.scores?.[b.id] || 0;
+            return scoreB - scoreA;
+        });
+    }, [verdict, selectedPlaces]);
 
-    const winner = selectedPlaces.find(p => p.id === verdict.winnerId) || sortedPlaces[0];
+    const winner = React.useMemo(() => {
+        if (!verdict || !verdict.winnerId) return sortedPlaces[0];
+        return selectedPlaces.find(p => p.id === verdict.winnerId) || sortedPlaces[0];
+    }, [verdict, selectedPlaces, sortedPlaces]);
+
+    React.useEffect(() => {
+        const dialog = dialogRef.current;
+        // If verdict exists and dialog is mounted, show it.
+        if (verdict && dialog && !dialog.open) {
+            dialog.showModal();
+        }
+        // No explicit else needed for closing if component unmounts on null verdict
+        return () => {
+            if (dialog && dialog.open) {
+                dialog.close();
+            }
+        };
+    }, [verdict]);
+
+    const handleClose = () => {
+        const dialog = dialogRef.current;
+        if (dialog) {
+            // Manually close first to trigger close event/animation if needed,
+            // but since we unmount on verdict=null, we just update state.
+            dialog.close();
+        }
+        setVerdict(null);
+    };
+
+    const handleDialogClick = (e: React.MouseEvent<HTMLDialogElement>) => {
+        e.stopPropagation();
+        if (e.target === dialogRef.current) {
+            handleClose();
+        }
+    };
+
+    // 2. Conditional return AFTER hooks
+    if (!verdict || !winner) return null;
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl relative flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
+        <dialog
+            ref={dialogRef}
+            className="m-auto w-[90vh] h-[90vh] rounded-3xl shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-300 backdrop:bg-black/50 backdrop:backdrop-blur-sm bg-transparent p-0 border-none flex flex-col"
+            onClick={handleDialogClick}
+            onCancel={handleClose}
+            aria-labelledby="verdict-modal-title"
+        >
+            {/* Inner Container: Needs h-full and flex to manage scroll area */}
+            <div className="bg-white w-full h-full flex flex-col overflow-hidden">
 
                 {/* Close Button */}
                 <button
-                    onClick={() => setVerdict(null)}
+                    onClick={handleClose}
                     className="absolute top-4 right-4 p-2 bg-white/80 backdrop-blur-sm rounded-full hover:bg-gray-100 text-gray-500 transition-colors z-50 shadow-sm border border-gray-100"
+                    aria-label="閉じる"
                 >
                     <X size={20} />
                 </button>
 
-                <div className="overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-gray-200">
+                {/* Content Wrapper - Flex Child */}
+                <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200">
                     {/* Header: Winner Banner */}
                     <div className="bg-gradient-to-br from-orange-50 to-amber-50 pt-8 text-center border-b border-brand-orange-dark/10 relative overflow-hidden shrink-0">
                         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-brand-orange-dark to-amber-500" />
 
-                        <div className="inline-flex items-center px-4 py-1.5 bg-brand-orange-dark text-white rounded-full text-sm font-bold mb-4 shadow-sm border border-brand-orange-dark/20">
+                        <div className="inline-flex items-center px-4 py-1.5 bg-brand-orange-dark text-brand-gray-dark rounded-full text-sm font-bold mb-4 shadow-sm border border-brand-orange-dark/20">
                             <Trophy size={14} className="fill-brand-orange-dark text-brand-orange-dark" />
                             あなたとのマッチ度 No.1
                         </div>
 
-                        <h2 className="text-3xl md:text-4xl font-black text-brand-black-dark mb-2 flex flex-col md:flex-row items-center justify-center gap-3">
+                        <h2 id="verdict-modal-title" className="text-3xl md:text-4xl font-black text-brand-black-dark mb-2 flex flex-col md:flex-row items-center justify-center gap-3">
                             <Crown className="w-10 h-10 text-brand-orange-dark fill-brand-orange-dark drop-shadow-sm" />
                             <span className="border-b-4 border-brand-orange-dark/20 decoration-none">{winner.name}</span>
                         </h2>
@@ -53,20 +103,17 @@ export function VerdictModal() {
                         </div>
 
                         <p className="text-type-memo  text-brand-black-light text-center my-3">
-                            💡 評価(Good/Bad)をしてAIの精度を上げましょう
+                            💡 「いいね」をしてAIの精度を上げましょう
                         </p>
                     </div>
 
                     {/* Body: Comparison Matrix */}
-                    <div className="flex-1 overflow-auto p-6 md:p-8 bg-white scrollbar-thin scrollbar-thumb-gray-200">
-                        {/* ... existing matrix ... */}
+                    <div className="p-6 md:p-8 bg-white">
                         <div className="flex-1 overflow-auto p-0 bg-white">
-                            {/* Keep existing table logic but remove outer padding if needed or keep consistent */}
                             <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                                 <span className="w-1.5 h-6 bg-brand-orange-dark rounded-full" />
                                 詳細比較
                             </h3>
-                            {/* ... table ... */}
                             <div className="overflow-x-auto pb-4">
                                 <table className="w-full min-w-[600px] border-collapse">
                                     <thead>
@@ -180,6 +227,6 @@ export function VerdictModal() {
                     </div>
                 </div>
             </div>
-        </div>
+        </dialog>
     );
 }

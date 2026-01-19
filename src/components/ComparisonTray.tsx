@@ -36,6 +36,9 @@ export function ComparisonTray({ focusedScenes }: ComparisonTrayProps) {
         }
     };
 
+    // Hide tray if no places are selected
+    if (selectedPlaces.length === 0) return null;
+
     return (
         <>
             <div className="fixed bottom-0 left-0 right-0 z-40 py-3 bg-white backdrop-blur-md border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] transition-transform duration-300 ease-in-out">
@@ -59,7 +62,7 @@ export function ComparisonTray({ focusedScenes }: ComparisonTrayProps) {
                                     <div key={place.id} className="relative group shrink-0 w-24 sm:w-32 bg-gray-50 rounded-md border border-gray-200 p-2 flex flex-col gap-1">
                                         <button
                                             onClick={() => toggleSelection(place)}
-                                            className="absolute -top-2 -right-2 bg-gray-800 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 z-10"
+                                            className="absolute -top-2 -right-2 bg-gray-800 text-brand-gray-dark rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 z-10"
                                         >
                                             <X size={14} />
                                         </button>
@@ -97,7 +100,7 @@ export function ComparisonTray({ focusedScenes }: ComparisonTrayProps) {
                             disabled={selectedPlaces.length < 2 || isComparing}
                             className={`flex items-center text-sm gap-2 px-6 py-3 rounded-full font-bold shadow-lg transition-all ${selectedPlaces.length < 2
                                 ? "bg-brand-gray-light text-brand-black-light cursor-not-allowed border border-brand-gray"
-                                : "bg-gradient-to-r from-brand-orange-dark to-brand-orange-dark/80 text-white hover:shadowbrand/30 hover:scale-105 active:scale-95"
+                                : "bg-gradient-to-r from-brand-orange-dark to-brand-orange-dark/80 text-brand-gray-dark hover:shadowbrand/30 hover:scale-105 active:scale-95"
                                 }`}
                         >
                             {isComparing ? (
