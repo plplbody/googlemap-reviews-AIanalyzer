@@ -15,3 +15,7 @@ firebase.json
 docker-compose.yml
 README.md
 *.md
+playwright.config.ts
+tests/
+test-results/
+playwright-report/
