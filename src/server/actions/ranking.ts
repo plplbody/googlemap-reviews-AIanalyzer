@@ -5,7 +5,10 @@ import { Place } from '@/types/schema';
 import { CITIES, PREFECTURES } from '@/constants/seo-areas';
 import { calculatePlaceScore } from '@/server/services/scoring';
 
-export async function getRankingPlaces(prefecture: string, city: string, scene: string): Promise<Place[]> {
+import { cache } from 'react';
+
+// Memoized version of getRankingPlaces for Request De-duplication (S5-Impl-02)
+export const getRankingPlaces = cache(async (prefecture: string, city: string, scene: string): Promise<Place[]> => {
     const db = getFirestore();
     const placesRef = db.collection('places');
 
@@ -19,13 +22,12 @@ export async function getRankingPlaces(prefecture: string, city: string, scene: 
 
     // 2. Query Firestore
     // Query: Area array contains 'areaName' AND Status is 'completed'
-    // Limit: 100 (for in-memory sort of top scores)
+    // Limit: Removed limit for accuracy (S5-Impl-03)
     try {
         const snapshot = await placesRef
             .where('area', 'array-contains', areaName)
             .where('status', '==', 'completed')
-            .limit(100)
-            .get();
+            .get(); // No limit
 
         const places: Place[] = [];
         snapshot.forEach(doc => {
@@ -54,8 +56,8 @@ export async function getRankingPlaces(prefecture: string, city: string, scene: 
 
         placesWithScores.sort((a, b) => b.score - a.score);
 
-        // 4. Return Top 10 (unwrap and inject score)
-        return placesWithScores.slice(0, 10).map(item => ({
+        // 4. Return Top 100 (expanded for SEO/Discoverability "100選")
+        return placesWithScores.slice(0, 100).map(item => ({
             ...item.place,
             trueScore: item.score
         }));
@@ -64,7 +66,7 @@ export async function getRankingPlaces(prefecture: string, city: string, scene: 
         console.error('Failed to fetch ranking places:', e);
         return [];
     }
-}
+});
 
 /**
  * Returns a set of valid "city:scene" keys that have at least 3 results.

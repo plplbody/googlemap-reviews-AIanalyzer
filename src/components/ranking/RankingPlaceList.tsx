@@ -33,7 +33,7 @@ export default function RankingPlaceList({ places }: RankingPlaceListProps) {
                         ${index === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-yellow-200' :
                             index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-500 shadow-gray-200' :
                                 index === 2 ? 'bg-gradient-to-br from-orange-600 to-orange-800 shadow-orange-200' :
-                                    'bg-gray-100 text-gray-400 border-gray-50'}
+                                    'bg-brand-black text-brand-gray border-brand-gray'}
                     `}>
                         {index + 1}
                     </div>
