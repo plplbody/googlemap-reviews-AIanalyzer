@@ -58,7 +58,7 @@ export default function ListingCard({
                 )}
 
                 <div className="flex justify-between items-baseline">
-                    <h3 className="text-lg font-serif font-bold text-gray-900 group-hover:text-brand-orange-dark transition-colors duration-300 line-clamp-1">
+                    <h3 className="text-lg  font-bold text-gray-900 group-hover:text-brand-orange-dark transition-colors duration-300 line-clamp-1">
                         {title}
                     </h3>
                     <div className="flex items-center gap-1 shrink-0 bg-[#FAFAFA] px-2 py-0.5 rounded-full border border-gray-100">

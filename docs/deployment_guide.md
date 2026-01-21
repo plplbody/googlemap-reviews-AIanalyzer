@@ -88,6 +88,7 @@ Cloud Runに設定する環境変数を準備します。
 | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | 同上 |
 | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | 同上 |
 | `NEXT_PUBLIC_FIREBASE_APP_ID` | 同上 |
+| `CRON_SECRET` | 任意の文字列（バッチAPI認証用） |
 
 > [!NOTE]
 > `GOOGLE_MAPS_API_KEY` は本番環境（Cloud Run）では**不要**です。自動的にサービスアカウント認証（ADC）が使われます。
@@ -178,3 +179,28 @@ HostingのURL（または設定した独自ドメイン）にアクセスしま�
 ```bash
 gcloud run services proxy [サービス名] --project [プロジェクトID]
 ```
+
+## 9. バッチ集計ジョブの設定 (Cloud Scheduler)
+
+ディレクトリページの表示速度を維持・SEO向上させるため、毎日深夜に集計バッチを実行します。
+
+### 9.1. コード側の準備 (認証有効化)
+`src/app/api/cron/stats/route.ts` 内のコメントアウトされている `API Route Protection` (認証部分) を有効化（コメント解除）し、デプロイしてください。
+
+### 9.2. Cloud Scheduler の設定
+
+GCPコンソールの「Cloud Scheduler」でジョブを作成します。
+
+1.  **名前**: `daily-stats-aggregation` (任意)
+2.  **リージョン**: `asia-northeast1` (推奨)
+3.  **頻度**: `0 0 * * *` (毎日深夜0時)
+    *   **タイムゾーン**: `日本標準時 (JST)`
+4.  **ターゲットタイプ**: `HTTP`
+5.  **URL**: `https://[あなたのCloud RunまたはHostingのURL]/api/cron/stats`
+6.  **HTTPメソッド**: `GET`
+7.  **HTTPヘッダー**:
+    *   名前: `Authorization`
+    *   値: `Bearer [設定したCRON_SECRETの値]`
+
+> [!WARNING]
+> `CRON_SECRET` は外部に漏れないよう、複雑なランダム文字列を使用してください。

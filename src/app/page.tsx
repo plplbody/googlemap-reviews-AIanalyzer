@@ -217,7 +217,7 @@ function HomeContent() {
 
 
   return (
-    <main className="min-h-screen bg-[#FAFAFA] text-[#1A1A1A] font-serif selection:bg-brand-orange-dark/20">
+    <main className="min-h-screen bg-[#FAFAFA] text-[#1A1A1A]  selection:bg-brand-orange-dark/20">
       <Header viewState={viewState} onResetHome={resetHome} />
 
       {viewState === "HOME" && (

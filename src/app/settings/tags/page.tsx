@@ -62,7 +62,7 @@ export default function TagManagementPage() {
     }
 
     return (
-        <main className="min-h-screen bg-[#FAFAFA] text-[#1A1A1A] font-serif">
+        <main className="min-h-screen bg-[#FAFAFA] text-[#1A1A1A] ">
             <Header viewState="PROFILE" onResetHome={() => router.push('/')} />
 
             <div className="pt-32 pb-24 container mx-auto px-6 max-w-2xl">

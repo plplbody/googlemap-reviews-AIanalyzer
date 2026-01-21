@@ -3,7 +3,7 @@ import { ArrowLeft, Sparkles, Sliders, ShieldCheck, Scale, Binary } from 'lucide
 
 export default function AboutPage() {
     return (
-        <main className="min-h-screen bg-[#FAFAFA] text-[#1A1A1A] font-serif pb-24">
+        <main className="min-h-screen bg-[#FAFAFA] text-[#1A1A1A]  pb-24">
             {/* Header */}
             <header className="bg-white border-b border-brand-gray sticky top-0 z-50">
                 <div className="container mx-auto px-6 h-16 flex items-center justify-between">

@@ -18,6 +18,8 @@ import { SearchProvider } from "@/contexts/SearchContext";
 import { ComparisonProvider } from "@/contexts/ComparisonContext";
 
 
+import Footer from "@/components/Footer";
+
 // アプリケーション全体のルートレイアウト
 export default function RootLayout({
     children,
@@ -26,11 +28,14 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="ja" suppressHydrationWarning>
-            <body className={`${shipporiMincho.className} antialiased`}>
+            <body className={`${shipporiMincho.className} antialiased flex flex-col min-h-screen`}>
                 <AuthProvider>
                     <SearchProvider>
                         <ComparisonProvider>
-                            {children}
+                            <div className="flex-grow">
+                                {children}
+                            </div>
+                            <Footer />
                         </ComparisonProvider>
                     </SearchProvider>
                 </AuthProvider>

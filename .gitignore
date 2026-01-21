@@ -46,3 +46,7 @@ firebase-data/
 
 # secrets command
 .command
+
+# Playwright
+test-results/
+playwright-report/
