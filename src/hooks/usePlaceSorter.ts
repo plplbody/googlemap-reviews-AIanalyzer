@@ -1,10 +1,9 @@
 import { useMemo } from "react";
 import { Place } from "@/types/schema";
 import { PersonalizedScore } from "@/server/actions/personalize";
-import { PlaceSearchResult } from "@/server/actions/place";
 
 interface UsePlaceSorterProps {
-    cachedResults: PlaceSearchResult[];
+    cachedResults: Place[];
     realtimePlaces: Record<string, Place>;
     pScores: Record<string, PersonalizedScore>;
     sortBy: 'ai' | 'google';
@@ -22,16 +21,10 @@ export function usePlaceSorter({
         const merged = cachedResults.map(initial => {
             const real = realtimePlaces[initial.id];
 
-            const base = real || {
-                id: initial.id,
-                name: initial.name,
-                originalRating: initial.rating,
-                userRatingsTotal: initial.userRatingsTotal,
-                address: initial.vicinity,
-                status: 'pending', // Default
-            } as Place;
+            // Initial is already a Place object (lite or full)
+            if (real) return real;
 
-            return base;
+            return initial;
         });
 
         // 2. Sort

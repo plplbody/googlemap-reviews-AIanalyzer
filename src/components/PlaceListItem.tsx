@@ -131,7 +131,7 @@ export default function PlaceListItem({
                                                     }`}
                                             >
                                                 <Pencil className="w-3 h-3" />
-                                                <span className="text-type-memo font-bold">{memo || repeat ? '編集' : 'メモ規'}</span>
+                                                <span className="text-type-memo font-bold">{memo || repeat ? 'メモ編集' : 'メモ記入'}</span>
                                             </button>
                                         )}
                                     </div>

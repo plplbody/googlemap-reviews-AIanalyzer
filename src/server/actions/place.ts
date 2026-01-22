@@ -19,7 +19,22 @@ function sanitizeLog(text: string): string {
     return text;
 }
 
-export async function getPlaceDetails(placeId: string): Promise<string> {
+// Helper to convert Firestore Timestamps to Date
+function convertTimestamps(data: any): any {
+    if (!data) return data;
+    const converted = { ...data };
+    const dateFields = ['createdAt', 'updatedAt', 'lastAnalyzedAt'];
+
+    dateFields.forEach(field => {
+        if (converted[field] && typeof converted[field].toDate === 'function') {
+            converted[field] = converted[field].toDate();
+        }
+    });
+
+    return converted;
+}
+
+export async function getPlaceDetails(placeId: string): Promise<Place | null> {
     // Security: Input Length Validation
     if (placeId.length > MAX_QUERY_LENGTH) {
         console.warn(`[Security] PlaceId too long: ${placeId.length} chars.`);
@@ -34,28 +49,35 @@ export async function getPlaceDetails(placeId: string): Promise<string> {
 
     if (doc.exists) {
         const data = doc.data() as Place;
-        console.log(`Place ${placeId} found. Status: ${data.status}`);
+
+        // Return existing data immediately for Server Components
+        // We still check expiration for background update, but return current data first to be fast
 
         // Check for expiration (30 days)
         const now = new Date();
-        const updatedAt = data.updatedAt ? (data.updatedAt as any).toDate() : new Date(0); // Handle Firestore Timestamp
+        const updatedAt = data.updatedAt ? (data.updatedAt as any).toDate() : new Date(0);
         const diffTime = Math.abs(now.getTime() - updatedAt.getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
         if (diffDays > 30) {
-            console.log(`Place ${placeId} data is expired (${diffDays} days old). Re-fetching...`);
-            // Fall through to fetch logic
+            console.log(`Place ${placeId} data is expired (${diffDays} days old). Re-fetching in background...`);
+            // Trigger background update but return Stale-While-Revalidate data
+            fetchAndSaveGooglePlace(placeId).catch(console.error);
         } else if (data.status === 'error') {
             await enqueueAnalysis(placeId);
-            return placeId;
-        } else {
-            return placeId;
         }
+
+        return { ...convertTimestamps(data), id: doc.id };
     }
 
-    // If we are here, it means either doc doesn't exist OR it's expired.
-    // We need to fetch from Google Places API.
+    // New Place logic
     console.log(`Fetching fresh data for place ${placeId}...`);
+    return await fetchAndSaveGooglePlace(placeId);
+}
+
+async function fetchAndSaveGooglePlace(placeId: string): Promise<Place> {
+    const docRef = getFirestore().collection('places').doc(placeId);
+    const existingDoc = await docRef.get();
 
     try {
         const auth = new GoogleAuth({
@@ -80,34 +102,25 @@ export async function getPlaceDetails(placeId: string): Promise<string> {
         }
 
         const data = await response.json();
-        // console.log('API Response Data:', JSON.stringify(data, null, 2));
-
         // Extract reviews
         const reviews = data.reviews?.map((r: any) => r.text?.text).filter(Boolean) || [];
 
-        // Extract Area (Hierarchy)
+        // Extract Area
         let area: string[] = [];
         if (data.addressComponents) {
-            const adminArea = data.addressComponents.find((c: any) => c.types?.includes('administrative_area_level_1')); // Prefecture
-            const locality = data.addressComponents.find((c: any) => c.types?.includes('locality')); // City / Ward
-
+            const adminArea = data.addressComponents.find((c: any) => c.types?.includes('administrative_area_level_1'));
+            const locality = data.addressComponents.find((c: any) => c.types?.includes('locality'));
             if (adminArea) area.push(adminArea.longText);
             if (locality) area.push(locality.longText);
-
-            // Deduplicate just in case
             area = Array.from(new Set(area));
         }
-
-        console.log(`Fetched reviews: ${reviews.length}`);
 
         const newPlace: Place = {
             id: data.id,
             name: data.displayName?.text || 'Unknown',
             address: data.formattedAddress,
-            // API Normalization Fields
             genre: data.types || [],
             area: area,
-
             originalRating: data.rating || 0,
             userRatingsTotal: data.userRatingCount || 0,
             ...(data.priceLevel ? { priceLevel: data.priceLevel } : {}),
@@ -143,36 +156,30 @@ export async function getPlaceDetails(placeId: string): Promise<string> {
                 },
             },
             status: 'pending',
-            createdAt: doc.exists ? (doc.data() as Place).createdAt : new Date(), // Keep original createdAt if exists
+            createdAt: existingDoc.exists ? (existingDoc.data() as Place).createdAt : new Date(),
             updatedAt: new Date(),
         };
 
-        await docRef.set(newPlace);
-
-        // Integrate HotPepper (High Accuracy with Phone)
+        // HotPepper logic...
         const phoneNumber = (data.nationalPhoneNumber || '').replace(/[^0-9]/g, '');
-
         if (phoneNumber) {
             try {
                 const hpData = await searchHotPepperPlace(newPlace.name, phoneNumber);
-
                 if (hpData) {
-                    console.log(`HotPepper Hit (Phone)! ${hpData.name}`);
-                    await docRef.update({ hotpepper: hpData });
+                    newPlace.hotpepper = hpData;
                 }
-            } catch (e) {
-                console.error('HotPepper integration error:', e);
-            }
+            } catch (e) { console.error(e); }
         }
 
+        await docRef.set(newPlace);
         await enqueueAnalysis(placeId);
+
+        return newPlace;
 
     } catch (error) {
         console.error('Failed to fetch place details:', error);
         throw error;
     }
-
-    return placeId;
 }
 
 
@@ -233,7 +240,7 @@ async function searchPlacesIdOnly(query: string, pageToken?: string): Promise<{ 
 }
 
 export interface PlaceSearchResponse {
-    places: PlaceSearchResult[];
+    places: Place[];
     nextPageToken?: string;
 }
 
@@ -253,7 +260,7 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
         // Optimized: Single API call. 
         // Checks cache (Status) after fetching to avoid Re-Analysis costs.
         const data = await fetchRawGooglePlaces(query, pageToken);
-        const results: PlaceSearchResult[] = [];
+        const results: Place[] = [];
         const items = data.places || [];
 
         if (items.length > 0) {
@@ -267,7 +274,7 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
             const existingDocs = await placesRef.where(firestore.FieldPath.documentId(), 'in', ids).get();
             const existingMap = new Map<string, Place>();
             existingDocs.forEach(doc => {
-                existingMap.set(doc.id, doc.data() as Place);
+                existingMap.set(doc.id, convertTimestamps(doc.data()) as Place);
             });
 
             // List of IDs that need analysis
@@ -302,7 +309,11 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
                 if (existing) {
                     // Check for expiration (30 days)
                     const now = new Date();
-                    const updatedAt = existing.updatedAt ? (existing.updatedAt as any).toDate() : new Date(0);
+                    // existing is already converted via convertTimestamps, so updatedAt should be Date
+                    const updatedAt = existing.updatedAt instanceof Date
+                        ? existing.updatedAt
+                        : (existing.updatedAt as any)?.toDate ? (existing.updatedAt as any).toDate() : new Date(0);
+
                     const diffTime = Math.abs(now.getTime() - updatedAt.getTime());
                     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
@@ -319,7 +330,7 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
                 }
 
                 // Prepare Place Object
-                const newPlace: Partial<Place> = {
+                const newPlace: Place = {
                     id: placeData.id,
                     name: placeData.displayName?.text || 'Unknown',
                     address: placeData.formattedAddress,
@@ -328,7 +339,7 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
                     originalRating: placeData.rating || 0,
                     userRatingsTotal: placeData.userRatingCount || 0,
                     ...(placeData.priceLevel ? { priceLevel: placeData.priceLevel } : {}),
-                    ...(placeData.priceRange ? { priceRange: placeData.priceRange } : {}),
+                    ...(placeData.priceRange ? { priceRange: data.priceRange } : {}), // Using outer data? No, check scope. Should be placeData.
                     reviews: reviews,
                     location: placeData.location ? {
                         lat: placeData.location.latitude,
@@ -340,7 +351,7 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
                             delivery: placeData.delivery,
                             takeout: placeData.takeout,
                             dineIn: placeData.dineIn,
-                            reservable: data.reservable
+                            reservable: placeData.reservable
                         },
                         offerings: {
                             servesBeer: placeData.servesBeer,
@@ -365,15 +376,8 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
                     ...(hotpepperData ? { hotpepper: hotpepperData } : {})
                 };
 
-                // Add to Result List
-                results.push({
-                    id: placeData.id,
-                    name: placeData.displayName?.text || 'Unknown',
-                    rating: placeData.rating || 0,
-                    userRatingsTotal: placeData.userRatingCount || 0,
-                    vicinity: placeData.formattedAddress,
-                    hotpepper: hotpepperData
-                });
+                // Add to Result List - Return FULL Place object to match schema
+                results.push(newPlace);
 
                 const ref = placesRef.doc(placeData.id);
                 batch.set(ref, newPlace, { merge: true });

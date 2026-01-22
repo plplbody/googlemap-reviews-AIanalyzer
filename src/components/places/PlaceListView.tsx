@@ -7,18 +7,18 @@ import PlaceList from '@/components/PlaceList';
 import { Place } from "@/types/schema";
 import { UserProfile, UserScenario } from "@/types/user";
 import { PersonalizedScore } from "@/server/actions/personalize";
+import { useSearch } from "@/contexts/SearchContext";
+import { searchPlaces } from "@/server/actions/place";
 
 interface PlaceListViewProps {
     // Data
     sortedPlaces: Place[];
     loading: boolean;
     loadingMore: boolean;
-    hasMore: boolean;
 
     // Search
     onSearchStart: () => void;
     onSearchComplete: (query: string) => void;
-    cachedQuery: string;
 
     // Navigation
     onResetHome: () => void;
@@ -26,7 +26,7 @@ interface PlaceListViewProps {
     onLoadMore: () => void;
 
     // Personalization State
-    user: any; // Using any to avoid complex Auth types import for now, or use User from firebase/auth
+    user: any;
     profile: UserProfile | null;
     effectivePrefs: UserProfile['aiPreferences'] | undefined;
     isAutoPersonalize: boolean;
@@ -62,10 +62,8 @@ export default function PlaceListView({
     sortedPlaces,
     loading,
     loadingMore,
-    hasMore,
     onSearchStart,
     onSearchComplete,
-    cachedQuery,
     onResetHome,
     onSelectPlace,
     onLoadMore,
@@ -90,6 +88,17 @@ export default function PlaceListView({
     isScoreOutdated,
     onRecalculate
 }: PlaceListViewProps) {
+    const { cachedQuery, cachedNextPageToken } = useSearch();
+    const hasMore = !!cachedNextPageToken;
+
+    // Handlers for SearchInput are now simple wrappers or direct calls if we expose them
+    // But SearchInput expects callbacks.
+    // ClientHomeWrapper passed `handleSearchComplete` which pushes Router.
+    // That logic (Routing) belongs to the Page/Wrapper. So we probably keep `onSearchStart/Complete` passed down for now
+    // UNLESS we move `useRouter` here too.
+    // The instructions said "Refactor Props Drilling", so cleaning up 5-6 props is good.
+    // But `SearchContext` doesn't have `searchPlaces` logic, it just holds data.
+
     return (
         <div className="pt-32 pb-24 min-h-screen bg-brand-gray-light">
             <div className="container mx-auto px-6 mb-8">
@@ -101,12 +110,18 @@ export default function PlaceListView({
                         <ArrowLeft className="w-5 h-5" />
                         ホーム
                     </button>
+                    {/* SearchInput still needs parent routing logic? Or can we pass it? */}
+                    {/* Actually, let's keep search props for now as they involve Routing, which is better at top level.
+                       But we can get `cachedQuery` from context directly. */}
                     <div className="w-full max-w-4xl mx-auto mb-4">
                         <SearchInput
                             onSearchStart={onSearchStart}
                             onSearchComplete={onSearchComplete}
                         />
                     </div>
+                    {/* Reverting thought: Props Drilling fix is about passing data that is already in context.
+                       `cachedQuery` is in context. `hasMore` is `!!cachedNextPageToken`.
+                    */}
 
                     {/* Filter Selection UI (Sticky Accordion) */}
                     <div className="sticky top-5 z-40 w-full max-w-4xl mx-auto backdrop-blur-sm rounded-xl transition-all duration-300">
