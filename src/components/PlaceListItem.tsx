@@ -1,6 +1,7 @@
 import { Place } from '@/types/schema';
 import { Star, MapPin, ChevronRight, Loader2, Train, Scale, DollarSign, Sparkles, CheckCircle, Pencil } from 'lucide-react';
 import { PlaceBadges } from '@/components/PlaceBadges';
+import { SakuraBadge } from '@/components/ui/SakuraBadge';
 import { updateStationInfo } from '@/server/actions/station';
 import { useEffect, useState } from 'react';
 import { ActionButtons } from '@/components/ActionButtons';
@@ -18,6 +19,7 @@ interface PlaceListItemProps {
     isVisited?: boolean;
     onToggleVisited?: (visited: boolean) => void;
     viewMode?: 'DEFAULT' | 'PROFILE'; // Explicit view context
+    initialInteraction?: import('@/types/user').UserInteraction;
 
     // Memo Props
     memo?: string;
@@ -64,7 +66,7 @@ export default function PlaceListItem({
             className={`bg-white rounded-2xl shadow-sm hover:shadow-xl border transition-all duration-300 cursor-pointer group flex flex-col h-full select-none active:scale-[0.98] active:bg-brand-gray-light relative overflow-hidden ${isSelected ? 'border-brand-orange-dark ring-1 ring-brand-orange-dark' : 'border-brand-gray'}`}
         >
             {/* 1. Hero Section (Background Image + Info) */}
-            <div className="relative h-48 bg-brand-gray-dark transition-all duration-500">
+            <div className="relative min-h-48 bg-brand-gray-dark transition-all duration-500">
                 {/* Background Image */}
                 {place.hotpepper?.imageUrl ? (
                     <img
@@ -90,8 +92,8 @@ export default function PlaceListItem({
                     <div className="flex justify-start">
                         {viewMode === 'PROFILE' && (
                             <div className="max-w-full">
-                                <div className="p-2 bg-white/95 backdrop-blur-md rounded-xl border border-white/20 shadow-lg flex flex-col gap-2">
-                                    <div className="flex items-center gap-2">
+                                <div className="p-4 bg-white/95 backdrop-blur-md rounded-xl border border-white/20 shadow-lg flex flex-col gap-4">
+                                    <div className="flex items-center gap-4">
                                         {/* Visited Toggle */}
                                         {onToggleVisited && (
                                             <button
@@ -99,7 +101,7 @@ export default function PlaceListItem({
                                                     e.stopPropagation();
                                                     onToggleVisited(!isVisited);
                                                 }}
-                                                className={`px-3 py-1.5 rounded-full shadow-sm border transition-all flex items-center gap-1.5 ${isVisited
+                                                className={`h-12 px-4 rounded-full shadow-sm border transition-all flex items-center gap-2 text-type-button ${isVisited
                                                     ? 'bg-emerald-500 border-emerald-500 text-white'
                                                     : 'bg-white border-brand-gray text-brand-black-light hover:bg-emerald-50 hover:border-emerald-200'
                                                     }`}
@@ -107,12 +109,12 @@ export default function PlaceListItem({
                                                 {isVisited ? (
                                                     <>
                                                         <CheckCircle className="w-3.5 h-3.5" />
-                                                        <span className="text-type-memo font-bold">来店済</span>
+                                                        <span>来店済</span>
                                                     </>
                                                 ) : (
                                                     <>
                                                         <div className="w-3.5 h-3.5 rounded-full border-2 border-brand-gray-dark" />
-                                                        <span className="text-type-memo font-bold">来店したらチェック</span>
+                                                        <span>来店したらチェック</span>
                                                     </>
                                                 )}
                                             </button>
@@ -125,26 +127,26 @@ export default function PlaceListItem({
                                                     e.stopPropagation();
                                                     setIsMemoOpen(true);
                                                 }}
-                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full shadow-sm border transition-all ${memo || repeat
+                                                className={`flex items-center gap-2 h-12 px-4 rounded-full shadow-sm border transition-all text-type-button ${memo || repeat
                                                     ? 'bg-brand-orange-light/50 border-brand-orange-light text-brand-orange-dark'
                                                     : 'bg-white border-brand-gray text-brand-black-light hover:bg-brand-orange-light/50 hover:border-brand-orange-light hover:text-brand-orange-dark'
                                                     }`}
                                             >
                                                 <Pencil className="w-3 h-3" />
-                                                <span className="text-type-memo font-bold">{memo || repeat ? 'メモ編集' : 'メモ記入'}</span>
+                                                <span>{memo || repeat ? 'メモ編集' : 'メモ記入'}</span>
                                             </button>
                                         )}
                                     </div>
 
                                     {/* Memo Content Display */}
                                     {(memo || repeat) && isVisited && (
-                                        <div className="pt-2 border-t border-brand-gray/20 flex flex-col gap-1">
-                                            <div className="flex gap-4 text-type-memo">
+                                        <div className="border-t border-brand-gray/20 flex flex-col">
+                                            <div className="flex gap-4 text-type-body">
                                                 {repeat && (
                                                     <div className="flex gap-1 shrink-0 items-center">
-                                                        {repeat === 'yes' && <span className="px-1.5 py-0.5 bg-brand-orange/10 text-brand-orange-dark rounded text-[10px] font-bold border border-brand-orange/20 whitespace-nowrap">リピートあり</span>}
-                                                        {repeat === 'maybe' && <span className="px-1.5 py-0.5 bg-brand-orange/10 text-brand-orange-dark rounded text-[10px] font-bold border border-brand-orange/20 whitespace-nowrap">迷う</span>}
-                                                        {repeat === 'no' && <span className="px-1.5 py-0.5 bg-brand-gray-dark text-brand-black rounded text-[10px] font-bold border border-brand-gray-dark whitespace-nowrap">リピートなし</span>}
+                                                        {repeat === 'yes' && <span className="px-2 py-1 bg-brand-orange/10 text-brand-orange-dark rounded rounded-md text-type-memo font-bold border border-brand-orange/20 whitespace-nowrap">リピートあり</span>}
+                                                        {repeat === 'maybe' && <span className="px-2 py-1 bg-brand-orange/10 text-brand-orange-dark rounded rounded-md text-type-memo font-bold border border-brand-orange/20 whitespace-nowrap">迷う</span>}
+                                                        {repeat === 'no' && <span className="px-2 py-1 bg-brand-gray-dark text-brand-black rounded rounded-md text-type-memo font-bold border border-brand-gray-dark whitespace-nowrap">リピートなし</span>}
                                                     </div>
                                                 )}
                                                 {memo && (
@@ -165,7 +167,7 @@ export default function PlaceListItem({
                         <h3 className="text-type-subtitle font-bold leading-tight mb-2 shadow-sm text-white drop-shadow-md">
                             {place.name}
                         </h3>
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-type-memo font-medium text-white/90">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-type-memo font-normal text-white/90">
                             {/* Price */}
                             <div className="flex items-center gap-1">
                                 <DollarSign className="w-3.5 h-3.5" />
@@ -204,12 +206,13 @@ export default function PlaceListItem({
 
 
                 {/* Badges */}
-                <div className="">
+                <div className="flex flex-wrap gap-2">
+                    <SakuraBadge score={place.avgSakuraScore} />
                     <PlaceBadges place={place} />
                 </div>
 
-                {/* AI Analysis Score Badge (Simplified) */}
-                <div className="p-4 bg-brand-gray-light rounded-xl border border-brand-gray relative overflow-hidden">
+                {/* AI Analysis Score Section (Simplified) */}
+                <div className="p-4 border-t border-brand-gray-dark relative">
                     {isAnalyzed ? (
                         <div className="flex flex-col gap-3">
                             {/* Unified Score Display Row */}
@@ -234,9 +237,9 @@ export default function PlaceListItem({
 
                                 {/* Google Score (Right - Subtle) */}
                                 <div className="text-right">
-                                    <span className="text-[10px] block mb-0.5 text-brand-black-light font-semibold">Google評価</span>
-                                    <div className="flex items-center justify-end gap-1.5">
-                                        <Star className="w-3.5 h-3.5 text-yellow-400 fill-current" />
+                                    <span className="text-[10px] block mb-0.5 text-brand-black-light font-normal">Google評価</span>
+                                    <div className="flex items-center justify-end gap-1">
+                                        <Star className="w-3.5 h-3.5 text-brand-yellow fill-current" />
                                         <span className="text-type-memo tabular-nums text-brand-black-light font-bold">
                                             {place.originalRating?.toFixed(1) || '0.0'}
                                         </span>
@@ -245,27 +248,25 @@ export default function PlaceListItem({
                                 </div>
                             </div>
 
-                            {/* AI Summary (One-liner prioritized) */}
+                            {/* AI Summary */}
                             {place.summary && (
-                                <div className="mt-2 pt-2 border-t border-brand-gray-dark">
-                                    <div className="flex flex-col gap-1.5 text-type-memo text-brand-black leading-relaxed">
-                                        {(Array.isArray(place.summary) ? place.summary : (place.summary as unknown as string).split('\n')).filter((line: string) => line.trim()).map((line: string, i: number) => (
-                                            <div key={i} className="flex items-start gap-2">
-                                                <Sparkles className="w-3.5 h-3.5 text-brand-orange-dark shrink-0 mt-0.5" />
-                                                <span className="">{line}</span>
-                                            </div>
-                                        ))}
-                                    </div>
+                                <div className="flex flex-col gap-1 text-type-memo text-brand-black leading-relaxed">
+                                    {(Array.isArray(place.summary) ? place.summary : (place.summary as unknown as string).split('\n')).filter((line: string) => line.trim()).map((line: string, i: number) => (
+                                        <div key={i} className="flex items-start gap-2">
+                                            <Sparkles className="w-3.5 h-3.5 text-brand-orange-dark shrink-0 mt-0.5" />
+                                            <span className="">{line}</span>
+                                        </div>
+                                    ))}
                                 </div>
                             )}
                         </div>
                     ) : isAnalyzing ? (
-                        <div className="flex items-center justify-center py-2 gap-2 text-brand-orange-dark">
+                        <div className="flex items-center justify-center py-4 gap-2 text-brand-orange-dark">
                             <Loader2 className="w-5 h-5 animate-spin" />
-                            <span className="text-type-body font-semibold">AI分析中...</span>
+                            <span className="text-type-body font-normal">AI分析中...</span>
                         </div>
                     ) : (
-                        <div className="flex items-center justify-center py-2 text-brand-black-light text-type-body font-semibold">
+                        <div className="flex items-center justify-center py-4 text-brand-black-light text-type-body font-normal">
                             分析待ち
                         </div>
                     )}
@@ -275,7 +276,12 @@ export default function PlaceListItem({
                 <div className="mt-auto flex items-center justify-between">
                     {/* Action Buttons */}
                     <div onClick={(e) => e.stopPropagation()}>
-                        <ActionButtons place={place} uid={user?.uid} onActionComplete={onActionComplete} />
+                        <ActionButtons
+                            place={place}
+                            uid={user?.uid}
+                            onActionComplete={onActionComplete}
+                            initialInteraction={props.initialInteraction}
+                        />
                     </div>
 
                     {/* Compare Toggle (Chip Style) */}
@@ -290,12 +296,12 @@ export default function PlaceListItem({
                             }`}
                     >
                         {isSelected ? (
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-2">
                                 <Scale className="w-3.5 h-3.5" />
                                 <span>選択中</span>
                             </div>
                         ) : (
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-2">
                                 <Scale className="w-3.5 h-3.5" />
                                 <span>比較する</span>
                             </div>

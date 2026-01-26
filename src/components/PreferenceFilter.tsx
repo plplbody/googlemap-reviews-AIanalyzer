@@ -153,7 +153,7 @@ const AutoView = ({
             <div className="flex justify-center items-center gap-2 mb-4">
                 <InfoBadge
                     label={
-                        <span className="text-xs font-semibold text-brand-orange-dark px-3 py-1 rounded-full bg-brand-orange-light/20 border border-brand-orange-light/50">
+                        <span className="text-xs font-bold text-brand-orange-dark px-3 py-1 rounded-full bg-brand-orange-light/20 border border-brand-orange-light/50">
                             学習度 Lv.{Math.floor(profile.experience / 100) + 1}
                         </span>
                     }

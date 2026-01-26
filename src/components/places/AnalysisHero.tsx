@@ -131,9 +131,9 @@ export function AnalysisHero({ place }: AnalysisHeroProps) {
 
                         <button
                             onClick={() => toggleSelection(place)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-full text-type-button transition-all shadow-sm active:scale-95 ${isSelected
-                                ? 'bg-brand-orange text-white border border-brand-orange-light shadow-md'
-                                : 'bg-white border border-brand-gray text-brand-black hover:bg-brand-gray-light'
+                            className={`rounded-full px-4 py-2 text-type-memo font-bold transition-all duration-300 shadow-sm border flex items-center gap-2 ${isSelected
+                                ? 'bg-brand-orange-dark text-white border-brand-orange-dark'
+                                : 'bg-white text-brand-black-light border-brand-gray hover:border-brand-orange-dark hover:text-brand-orange-dark'
                                 }`}
                         >
                             {isSelected ? <CheckCircle className="w-4 h-4" /> : <Scale className="w-4 h-4" />}
@@ -148,7 +148,7 @@ export function AnalysisHero({ place }: AnalysisHeroProps) {
                                 href={place.hotpepper.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-[#FF0033] hover:bg-[#D9002B] text-brand-gray rounded-full text-type-button shadow-md transition-transform hover:-translate-y-0.5"
+                                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 bg-[#FF0033] hover:bg-[#D9002B] text-brand-gray rounded-full text-type-button shadow-md transition-transform hover:-translate-y-0.5"
                             >
                                 HotPepper
                                 <ExternalLink className="w-3 h-3" />
@@ -158,7 +158,7 @@ export function AnalysisHero({ place }: AnalysisHeroProps) {
                             href={`https://tabelog.com/rstLst/?vs=1&sw=${encodeURIComponent(place.name)}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-yellow-500 hover:bg-yellow-600 text-brand-gray-light rounded-full text-type-button shadow-md transition-transform hover:-translate-y-0.5"
+                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-3 bg-yellow-500 hover:bg-yellow-600 text-brand-gray-light rounded-full text-type-button shadow-md transition-transform hover:-translate-y-0.5"
                         >
                             食べログ
                             <ExternalLink className="w-3 h-3" />

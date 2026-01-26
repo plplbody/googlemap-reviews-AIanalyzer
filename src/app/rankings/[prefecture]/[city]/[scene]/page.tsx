@@ -27,7 +27,9 @@ export const dynamicParams = true; // Allow paths not returned by generateStatic
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
     const { prefecture, city, scene } = await params;
-    if (!validateRankingParams(prefecture, city, scene)) return {};
+    if (!validateRankingParams(prefecture, city, scene)) {
+        notFound();
+    }
 
     const prefName = getPrefectureName(prefecture);
     const cityName = getCityName(prefecture, city);
@@ -115,12 +117,12 @@ export default async function RankingPage({ params }: PageProps) {
 
                 {/* Header */}
                 <header className="mb-10 text-center">
-                    <h1 className="text-3xl md:text-4xl font-extrabold text-brand-black mb-4 leading-tight">
-                        <span className="text-brand-orange block text-lg font-bold mb-2 tracking-widest">AI分析ランキング</span>
-                        {cityName}の<span className="text-brand-orange-dark">{sceneName}</span>ランキングTOP100
+                    <h1 className="text-type-title font-extrabold text-brand-black mb-4 leading-tight">
+                        <span className="text-brand-orange block text-type-subtitle font-bold mb-2 tracking-widest">AI分析スコアランキング</span>
+                        {cityName}の<span className="text-brand-orange-dark">{sceneName}</span>で失敗しないお店TOP100
                     </h1>
-                    <p className="text-brand-black-light text-sm md:text-base max-w-2xl mx-auto">
-                        AIが数千件の口コミを読み込み、味・接客・雰囲気の真実をスコアリング。<br />
+                    <p className="text-brand-black-light text-type-body max-w-2xl mx-auto">
+                        AIが数千件の口コミを読み込み、味・接客・雰囲気をスコアリング。<br />
                         {cityName}で失敗しない{sceneName}のお店を厳選しました。
                     </p>
                 </header>

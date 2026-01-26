@@ -55,7 +55,7 @@ export default function TagCreationForm({ uid, onSuccess, onCancel }: TagCreatio
                     value={tagName}
                     onChange={(e) => setTagName(e.target.value)}
                     placeholder="例: ラーメン、隠れ家バー、休日ランチ、激辛..."
-                    className="w-full p-3 rounded-xl border border-brand-gray-dark focus:outline-none focus:border-brand-orange focus:ring-2 focus:ring-brand-orange-light text-brand-black placeholder:text-brand-black-ligh text-type-memo font-semibold mb-4 bg-brand-gray-light/30 transition-all"
+                    className="w-full p-3 rounded-xl border border-brand-gray-dark focus:outline-none focus:border-brand-orange focus:ring-2 focus:ring-brand-orange-light text-brand-black placeholder:text-brand-black-ligh text-type-memo font-bold mb-4 bg-brand-gray-light/30 transition-all"
                     onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
                 />
                 <div className="bg-brand-orange-light/10 border border-brand-orange/20 rounded-lg p-3 mb-4">

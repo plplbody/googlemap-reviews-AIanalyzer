@@ -9,6 +9,7 @@ import { UserProfile, UserScenario } from "@/types/user";
 import { PersonalizedScore } from "@/server/actions/personalize";
 import { useSearch } from "@/contexts/SearchContext";
 import { searchPlaces } from "@/server/actions/place";
+import { useBulkUserInteractions } from "@/hooks/useBulkUserInteractions";
 
 interface PlaceListViewProps {
     // Data
@@ -91,6 +92,11 @@ export default function PlaceListView({
     const { cachedQuery, cachedNextPageToken } = useSearch();
     const hasMore = !!cachedNextPageToken;
 
+    // S2-Impl-01: Bulk Fetch Interaction Status
+    // Collect all place IDs currently shown
+    const placeIds = sortedPlaces.map(p => p.id);
+    const { interactions: bulkInteractions } = useBulkUserInteractions(user?.uid, placeIds);
+
     // Handlers for SearchInput are now simple wrappers or direct calls if we expose them
     // But SearchInput expects callbacks.
     // ClientHomeWrapper passed `handleSearchComplete` which pushes Router.
@@ -145,7 +151,7 @@ export default function PlaceListView({
 
                     {/* Sort Controls */}
                     <div className="flex flex-col items-center mt-3 gap-2">
-                        <span className="text-type-body font-semibold text-brand-black">並び替え</span>
+                        <span className="text-type-body font-bold text-brand-black">並び替え</span>
                         <div className="bg-white p-1 rounded-full border border-brand-gray flex shadow-sm">
                             <SelectionButton
                                 isSelected={sortBy === 'ai'}
@@ -184,6 +190,7 @@ export default function PlaceListView({
                                 isScoreOutdated={isScoreOutdated}
                                 onRecalculate={onRecalculate}
                                 query={cachedQuery}
+                                interactionStatusMap={bulkInteractions}
                             />
                         )}
                     </div>

@@ -19,7 +19,7 @@ const getVertexAI = (): VertexAI => {
     return vertexAI;
 };
 
-export const getGenerativeModel = (modelName: string = 'gemini-2.0-flash-001'): GenerativeModel => {
+export const getGenerativeModel = (modelName: string = 'gemini-2.5-flash'): GenerativeModel => {
     return getVertexAI().getGenerativeModel({ model: modelName });
 };
 

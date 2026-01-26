@@ -4,20 +4,27 @@ import { useState, useEffect, useRef } from 'react';
 import { Place } from '@/types/schema';
 import { useUserInteractions } from '@/hooks/useUserInteractions';
 import { useUserInteractionStatus } from '@/hooks/useUserInteractionStatus';
-
+import { useAuth } from '@/contexts/AuthContext';
 import { Heart } from 'lucide-react';
 import TagPicker from './TagPicker';
 import LearningFeedbackPopup from './LearningFeedbackPopup';
+import { UserInteraction } from '@/types/user';
 
 interface ActionButtonsProps {
     place: Place;
     uid?: string;
     onActionComplete?: (effectivePreferences?: any) => void;
+    initialInteraction?: UserInteraction | null; // S2-Impl-01: Allow injection from parent
 }
 
-export function ActionButtons({ place, uid, onActionComplete }: ActionButtonsProps) {
+export function ActionButtons({ place, uid, onActionComplete, initialInteraction }: ActionButtonsProps) {
+    const { signInWithGoogle } = useAuth();
     const { evaluate, isLoading } = useUserInteractions(uid || '', place.id);
-    const { interaction, loading: isStatusLoading } = useUserInteractionStatus(uid || '', place.id);
+
+    // S2-Impl-01: Use injected interaction if available, otherwise fetch
+    const hookResult = useUserInteractionStatus(uid || '', place.id, !!initialInteraction);
+    const interaction = initialInteraction !== undefined ? initialInteraction : hookResult.interaction;
+    const isStatusLoading = initialInteraction !== undefined ? false : hookResult.loading;
 
     // Sync with DB state, but allow local override for optimistic UI
     // We treat "Good" evaluation as the source of truth for "Liked/Saved"
@@ -46,7 +53,14 @@ export function ActionButtons({ place, uid, onActionComplete }: ActionButtonsPro
 
     const handleHeartClick = async () => {
         if (!uid) {
-            alert('ログインが必要です');
+            // S2-Impl-02: Auth Guard with Sign In
+            if (confirm('お気に入り機能を使うにはログインが必要です。\nログインしますか？')) {
+                try {
+                    await signInWithGoogle();
+                } catch (e) {
+                    console.error("Login failed", e);
+                }
+            }
             return;
         }
 
@@ -160,9 +174,6 @@ export function ActionButtons({ place, uid, onActionComplete }: ActionButtonsPro
             submitEvaluation([], undefined);
         }
     };
-
-    // Cleanup: If component unmounts while pending, this is tricky. 
-    // We rely on handlePickerClose being called or explicit interactions.
 
     return (
         <div className="relative">

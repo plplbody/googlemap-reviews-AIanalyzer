@@ -159,6 +159,17 @@ export function calculatePlaceScore(
         S_match = weightedAvg;
         S_final = weightedAvg;
         isPersonalized = true;
+        isPersonalized = true;
+    }
+
+    // --- SAKURA PENALTY APPLICATION ---
+    // Apply the persisted penalty to the re-calculated personalized scores.
+    // This ensures that even if Axis Scores are high, the final result is suppressed.
+    if (place.sakuraPenalty) {
+        const p = place.sakuraPenalty;
+        S_final = Math.max(1.0, S_final - p);
+        S_match = Math.max(1.0, S_match - p);
+        // Note: S_quality (place.trueScore) is already penalized in DB.
     }
 
     return {

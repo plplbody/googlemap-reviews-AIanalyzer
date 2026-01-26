@@ -260,7 +260,7 @@ export default function AnalysisResult({ place, focusedAxes = [], focusedScenes 
 
                         {place.usageSummary && (
                             <div className="mt-6 bg-brand-gray-light border border-brand-gray rounded-2xl p-4 text-type-body text-brand-black leading-relaxed">
-                                <span className="text-type-body font-semibold text-brand-black mr-2">💡 シーン分析:</span>
+                                <span className="text-type-body font-bold text-brand-black mr-2">💡 シーン分析:</span>
                                 {place.usageSummary}
                             </div>
                         )}
@@ -341,7 +341,7 @@ function InfoGroup({ title, icon: Icon, children }: any) {
         <div className="space-y-4">
             <div className="flex items-center gap-2 text-brand-black border-b border-brand-gray pb-2">
                 <Icon className="w-5 h-5 text-brand-black-light" />
-                <h4 className="text-type-body font-semibold">{title}</h4>
+                <h4 className="text-type-body font-bold">{title}</h4>
             </div>
             <div className="space-y-2 pl-2">
                 {children}

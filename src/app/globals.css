@@ -12,6 +12,15 @@
   --color-brand-gray: var(--color-slate-100);
   --color-brand-gray-light: var(--color-slate-50);
   --color-brand-gray-dark: var(--color-slate-200);
+
+  /* Semantic Colors */
+  --color-brand-red: var(--color-red-500);
+  --color-brand-red-light: var(--color-red-100);
+  --color-brand-red-dark: var(--color-red-800);
+
+  --color-brand-yellow: var(--color-amber-400);
+  --color-brand-yellow-light: var(--color-amber-100);
+  --color-brand-yellow-dark: var(--color-amber-800);
 }
 
 :root {
@@ -55,7 +64,7 @@ body {
 
   /* カード内のタイトルなど */
   .text-type-subtitle {
-    @apply text-lg md:text-xl font-semibold;
+    @apply text-lg md:text-xl font-bold;
   }
 
   /* 読ませたい */
@@ -65,7 +74,7 @@ body {
 
   /* ボタン */
   .text-type-button {
-    @apply text-sm md:text-base font-semibold;
+    @apply text-sm md:text-base font-bold;
   }
 
   /* 視界に入れたく参考情報 */

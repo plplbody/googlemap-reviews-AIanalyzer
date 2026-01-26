@@ -32,7 +32,8 @@ export const signInWithGoogle = async () => {
                 aiPreferences: { taste: 0, service: 0, atmosphere: 0, cost: 0 },
                 featureAffinities: {},
                 favoriteAreas: [],
-                favoriteGenres: []
+                favoriteGenres: [],
+                experience: 0, // Initial XP
             };
             await setDoc(userRef, newProfile);
         }

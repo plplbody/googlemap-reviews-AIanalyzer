@@ -182,7 +182,13 @@ export default function ClientHomeWrapper({
 
         setLoadingMore(true);
         try {
-            const response = await searchPlaces(query, token);
+            const apiRes = await fetch('/api/places/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query, pageToken: token })
+            });
+            if (!apiRes.ok) throw new Error('Search failed');
+            const response = await apiRes.json();
             appendResults(response.places, response.nextPageToken);
         } catch (error) {
             console.error("Failed to load more", error);
@@ -209,7 +215,14 @@ export default function ClientHomeWrapper({
                 // Case: New Query OR Initial Query but no data (e.g. reload on empty search)
                 setLoading(true);
                 try {
-                    const response = await searchPlaces(query);
+                    const apiRes = await fetch('/api/places/search', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query })
+                    });
+                    if (!apiRes.ok) throw new Error('Search failed');
+                    const response = await apiRes.json();
+
                     setCache(query, response.places, response.nextPageToken);
                     setLoading(false);
                 } catch (error) {
@@ -314,7 +327,7 @@ export default function ClientHomeWrapper({
                     place={place}
                     onBack={() => {
                         const from = searchParams.get("from");
-                        if (from === 'profile') {
+                        if (from === 'profile' || from === 'ranking') {
                             router.back();
                             return;
                         }

@@ -90,7 +90,7 @@ async function fetchAndSaveGooglePlace(placeId: string): Promise<Place> {
         const headers = {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token.token}`,
-            'X-Goog-FieldMask': 'id,displayName,formattedAddress,addressComponents,types,location,rating,userRatingCount,reviews,priceLevel,priceRange,paymentOptions,delivery,takeout,dineIn,reservable,servesBeer,servesWine,servesVegetarianFood,servesCoffee,servesBreakfast,servesLunch,servesDinner,goodForChildren,goodForGroups,restroom,accessibilityOptions,nationalPhoneNumber'
+            'X-Goog-FieldMask': 'id,displayName,formattedAddress,addressComponents,types,location,rating,userRatingCount,reviews.name,reviews.rating,reviews.text,reviews.publishTime,reviews.relativePublishTimeDescription,reviews.authorAttribution,priceLevel,priceRange,paymentOptions,delivery,takeout,dineIn,reservable,servesBeer,servesWine,servesVegetarianFood,servesCoffee,servesBreakfast,servesLunch,servesDinner,goodForChildren,goodForGroups,restroom,accessibilityOptions,nationalPhoneNumber,editorialSummary,reviewSummary'
         };
 
         const response = await fetch(baseUrl, { method: 'GET', headers });
@@ -103,7 +103,17 @@ async function fetchAndSaveGooglePlace(placeId: string): Promise<Place> {
 
         const data = await response.json();
         // Extract reviews
-        const reviews = data.reviews?.map((r: any) => r.text?.text).filter(Boolean) || [];
+        const reviews = data.reviews?.map((r: any) => ({
+            text: r.text?.text || "",
+            rating: r.rating,
+            publishTime: r.publishTime,
+            relativePublishTime: r.relativePublishTimeDescription,
+            author: {
+                name: r.authorAttribution?.displayName || "Unknown",
+                photoUri: r.authorAttribution?.photoUri,
+                uri: r.authorAttribution?.uri
+            }
+        })) || [];
 
         // Extract Area
         let area: string[] = [];
@@ -130,6 +140,8 @@ async function fetchAndSaveGooglePlace(placeId: string): Promise<Place> {
                 lat: data.location.latitude,
                 lng: data.location.longitude
             } : undefined,
+            editorialSummary: data.editorialSummary?.text,
+            reviewSummary: data.reviewSummary?.text?.text,
             detailedInfo: {
                 paymentOptions: data.paymentOptions,
                 serviceOptions: {
@@ -288,7 +300,17 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
 
             for (const placeData of items) {
                 // Determine Reviews
-                const reviews = placeData.reviews?.map((r: any) => r.text?.text).filter(Boolean) || [];
+                const reviews = placeData.reviews?.map((r: any) => ({
+                    text: r.text?.text || "",
+                    rating: r.rating,
+                    publishTime: r.publishTime,
+                    relativePublishTime: r.relativePublishTimeDescription,
+                    author: {
+                        name: r.authorAttribution?.displayName || "Unknown",
+                        photoUri: r.authorAttribution?.photoUri,
+                        uri: r.authorAttribution?.uri
+                    }
+                })) || [];
 
                 // Extract Area (Hierarchy)
                 let area: string[] = [];
@@ -345,6 +367,8 @@ export async function searchPlaces(query: string, pageToken?: string): Promise<P
                         lat: placeData.location.latitude,
                         lng: placeData.location.longitude
                     } : undefined,
+                    editorialSummary: placeData.editorialSummary?.text,
+                    reviewSummary: placeData.reviewSummary?.text?.text,
                     detailedInfo: {
                         paymentOptions: placeData.paymentOptions,
                         serviceOptions: {
@@ -438,7 +462,7 @@ async function fetchRawGooglePlaces(query: string, pageToken?: string) {
         headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token.token}`,
-            'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.addressComponents,places.types,places.location,places.rating,places.userRatingCount,places.reviews,places.priceLevel,places.priceRange,places.paymentOptions,places.delivery,places.takeout,places.dineIn,places.reservable,places.servesBeer,places.servesWine,places.servesVegetarianFood,places.servesCoffee,places.servesBreakfast,places.servesLunch,places.servesDinner,places.goodForChildren,places.goodForGroups,places.restroom,places.accessibilityOptions,places.nationalPhoneNumber,nextPageToken'
+            'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.addressComponents,places.types,places.location,places.rating,places.userRatingCount,places.reviews.name,places.reviews.rating,places.reviews.text,places.reviews.publishTime,places.reviews.relativePublishTimeDescription,places.reviews.authorAttribution,places.priceLevel,places.priceRange,places.paymentOptions,places.delivery,places.takeout,places.dineIn,places.reservable,places.servesBeer,places.servesWine,places.servesVegetarianFood,places.servesCoffee,places.servesBreakfast,places.servesLunch,places.servesDinner,places.goodForChildren,places.goodForGroups,places.restroom,places.accessibilityOptions,places.nationalPhoneNumber,places.editorialSummary,places.reviewSummary,nextPageToken'
         },
         body: JSON.stringify(requestBody)
     });

@@ -65,7 +65,7 @@ export function AnalysisVerdictCard({ place, personalScore }: AnalysisVerdictCar
                     {/* Circle Score */}
                     <div className="flex flex-col items-center gap-2 md:gap-4 shrink-0">
                         {/* Match & Label */}
-                        <div className="text-brand-orange-dark rounded-full text-type-body font-semibold ">
+                        <div className="text-brand-orange-dark rounded-full text-type-body font-bold ">
                             AI分析スコア
                         </div>
 

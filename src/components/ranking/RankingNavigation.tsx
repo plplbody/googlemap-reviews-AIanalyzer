@@ -44,7 +44,7 @@ export default function RankingNavigation({ currentPrefecture, currentCity, curr
             <div className="grid md:grid-cols-2 gap-10">
                 {/* Same City, Other Scenes */}
                 <div>
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                         <span className="w-1 h-6 bg-brand-orange-dark rounded-full"></span>
                         同じエリアで他のシーン
                     </h3>
@@ -65,7 +65,7 @@ export default function RankingNavigation({ currentPrefecture, currentCity, curr
 
                 {/* Other Cities, Same Scene */}
                 <div>
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                         <span className="w-1 h-6 bg-brand-orange-dark rounded-full"></span>
                         周辺エリアで探す
                     </h3>

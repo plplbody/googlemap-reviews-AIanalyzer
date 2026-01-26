@@ -4,6 +4,7 @@ import { Place } from '@/types/schema';
 import PlaceListItem from './PlaceListItem';
 import { RefreshCw } from 'lucide-react';
 import { PersonalizedScore } from '@/server/actions/personalize';
+import { UserInteraction } from '@/types/user';
 
 interface PlaceListProps {
     places: Place[];
@@ -18,10 +19,11 @@ interface PlaceListProps {
     isScoreOutdated?: boolean;
     onRecalculate?: () => void;
     query: string;
+    interactionStatusMap?: Record<string, UserInteraction>;
 }
 
 // 検索結果のリストを表示するコンポーネント
-export default function PlaceList({ places, onSelect, onLoadMore, hasMore, loadingMore, focusedAxes, focusedScenes, personalizedScores, onActionComplete, isScoreOutdated, onRecalculate, query }: PlaceListProps) {
+export default function PlaceList({ places, onSelect, onLoadMore, hasMore, loadingMore, focusedAxes, focusedScenes, personalizedScores, onActionComplete, isScoreOutdated, onRecalculate, query, interactionStatusMap }: PlaceListProps) {
     return (
         <div className="w-full max-w-6xl mx-auto px-4 py-8">
             <div className="mb-6 flex items-end justify-between">
@@ -51,6 +53,7 @@ export default function PlaceList({ places, onSelect, onLoadMore, hasMore, loadi
                             personalizedScores?.[place.id]?.finalScore ?? place.trueScore
                         }
                         onActionComplete={onActionComplete}
+                        initialInteraction={interactionStatusMap?.[place.id]}
                     />
                 ))}
             </div>

@@ -39,7 +39,7 @@ export default function PlaceDetailView({
             <div className="flex justify-between items-center mb-6">
                 <button
                     onClick={onBack}
-                    className="flex items-center gap-2 text-brand-black hover:text-brand-orange-dark transition-colors font-medium"
+                    className="flex items-center gap-2 h-12 px-2 -ml-2 text-brand-black hover:text-brand-orange-dark transition-colors font-medium"
                 >
                     <ArrowLeft className="w-5 h-5" />
                     戻る
@@ -49,7 +49,7 @@ export default function PlaceDetailView({
                     {hasPrev && (
                         <button
                             onClick={onPrev}
-                            className="flex items-center gap-2 text-brand-black hover:text-brand-orange-dark transition-colors font-medium"
+                            className="flex items-center gap-2 h-12 px-2 text-brand-black hover:text-brand-orange-dark transition-colors font-medium"
                         >
                             <ArrowLeft className="w-5 h-5" />
                             前の店
@@ -59,7 +59,7 @@ export default function PlaceDetailView({
                     {hasNext && (
                         <button
                             onClick={onNext}
-                            className="flex items-center gap-2 text-brand-black hover:text-brand-orange-dark transition-colors font-medium"
+                            className="flex items-center gap-2 h-12 px-2 text-brand-black hover:text-brand-orange-dark transition-colors font-medium"
                         >
                             次の店
                             <ArrowLeft className="w-5 h-5 rotate-180" />

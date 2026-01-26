@@ -66,7 +66,7 @@ export function ComparisonTray({ focusedScenes }: ComparisonTrayProps) {
                                         >
                                             <X size={14} />
                                         </button>
-                                        <div className="text-xs font-semibold truncate text-brand-black">{place.name}</div>
+                                        <div className="text-xs font-bold truncate text-brand-black">{place.name}</div>
                                         <div className="flex items-center gap-1 text-[10px] text-brand-black">
                                             <span className="font-mono text-brand-orange-dark">{(place.trueScore && place.trueScore > 0 ? place.trueScore.toFixed(1) : place.originalRating?.toFixed(1) || "-")}</span>
                                             <span className="truncate">{place.nearestStation || "駅不明"}</span>

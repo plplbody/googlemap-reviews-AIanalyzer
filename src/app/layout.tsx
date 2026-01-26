@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { Shippori_Mincho } from "next/font/google";
+import { Noto_Serif_JP } from "next/font/google";
 import "./globals.css";
 
-const shipporiMincho = Shippori_Mincho({
-    weight: ["400", "500", "600", "700", "800"],
+const notoSerifJP = Noto_Serif_JP({
+    weight: ["400", "500", "600", "700"],
     subsets: ["latin"],
     display: "swap",
 });
@@ -28,7 +28,7 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="ja" suppressHydrationWarning>
-            <body className={`${shipporiMincho.className} antialiased flex flex-col min-h-screen`}>
+            <body className={`${notoSerifJP.className} antialiased flex flex-col min-h-screen`}>
                 <AuthProvider>
                     <SearchProvider>
                         <ComparisonProvider>

@@ -5,13 +5,13 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/client';
 import { UserInteraction } from '@/types/user';
 
-export function useUserInteractionStatus(uid: string, placeId: string) {
+export function useUserInteractionStatus(uid: string, placeId: string, skip: boolean = false) {
     const [interaction, setInteraction] = useState<UserInteraction | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!uid || !placeId) {
-            setInteraction(null);
+        if (skip || !uid || !placeId) {
+            if (!skip) setInteraction(null);
             setLoading(false);
             return;
         }

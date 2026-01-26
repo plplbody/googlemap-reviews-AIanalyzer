@@ -41,7 +41,7 @@ export default function RankingPlaceList({ places }: RankingPlaceListProps) {
                     <div className="h-full transform transition-all hover:-translate-y-1">
                         <PlaceListItem
                             place={place}
-                            onSelect={(id) => router.push(`/?view=DETAIL&id=${id}`)}
+                            onSelect={(id) => router.push(`/?view=DETAIL&id=${id}&from=ranking`)}
                         // Pass empty functions for interactive elements to prevent errors if they are required, 
                         // though PlaceListItem implementation seems to handle optionals gracefully.
                         />

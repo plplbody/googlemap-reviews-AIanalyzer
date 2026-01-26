@@ -4,7 +4,9 @@ import { Metadata } from 'next';
 import { validateRankingParams } from '@/utils/seo-helpers';
 import { getRankingPlaces, getPrefectureStats } from '@/server/actions/ranking';
 import { PREFECTURES, CITIES, SCENES, getPrefectureName } from '@/constants/seo-areas';
+import { GOJYUON_ROWS, getGojyuonRow, normalizeForSort } from '@/utils/jp-formatting';
 import { ChevronRight, MapPin } from 'lucide-react';
+import RankingBreadcrumbs from '@/components/ranking/RankingBreadcrumbs';
 
 interface PageProps {
     params: Promise<{
@@ -18,9 +20,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const isValid = validateRankingParams(prefecture);
 
     if (!isValid) {
-        return {
-            title: '404 - Page Not Found',
-        };
+        notFound();
     }
 
     const prefName = getPrefectureName(prefecture);
@@ -60,11 +60,7 @@ export default async function PrefectureDirectoryPage({ params }: PageProps) {
         <div className="min-h-screen bg-brand-gray-light pt-24 pb-16">
             <div className="container mx-auto px-4 max-w-4xl">
                 {/* Breadcrumbs */}
-                <nav className="flex items-center text-sm text-gray-500 mb-8" aria-label="Breadcrumb">
-                    <Link href="/" className="hover:text-brand-orange transition-colors">Top</Link>
-                    <ChevronRight className="w-4 h-4 mx-2" />
-                    <span className="font-medium text-brand-black" aria-current="page">{prefName}</span>
-                </nav>
+                <RankingBreadcrumbs prefecture={prefecture} />
 
                 <div className="bg-white rounded-xl shadow-sm border border-brand-gray p-8">
                     <header className="mb-10 text-center">
@@ -77,57 +73,110 @@ export default async function PrefectureDirectoryPage({ params }: PageProps) {
                     </header>
 
                     {/* City List */}
-                    <div className="space-y-12">
-                        {citiesInPref.length > 0 ? (
-                            citiesInPref.map((city: any) => (
-                                <section key={city.id} className="border-b border-gray-100 last:border-0 pb-12 last:pb-0">
-                                    <h2 className="flex items-center text-xl font-bold text-brand-black mb-6">
-                                        <MapPin className="w-5 h-5 text-brand-orange mr-2" />
-                                        {city.name}
-                                    </h2>
+                    {citiesInPref.length > 0 ? (
+                        (() => {
+                            // Group and Sort
+                            const grouped = citiesInPref.reduce((acc: Record<string, any[]>, city: any) => {
+                                const row = getGojyuonRow(city.id);
+                                if (!acc[row.label]) acc[row.label] = [];
+                                acc[row.label].push(city);
+                                return acc;
+                            }, {} as Record<string, typeof citiesInPref>);
 
-                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                                        {SCENES.map((scene) => {
-                                            const key = `${city.id}:${scene.slug}`;
-                                            const isValid = validKeys.has(key);
+                            const rowKeys = GOJYUON_ROWS.map(r => r.label).filter(l => grouped[l]?.length > 0);
 
-                                            if (isValid) {
-                                                return (
-                                                    <Link
-                                                        key={scene.slug}
-                                                        href={`/rankings/${prefecture}/${city.id}/${scene.slug}`}
-                                                        className="group flex flex-col items-center justify-center p-4 rounded-lg border border-gray-100 hover:border-brand-orange/30 hover:bg-brand-orange/5 transition-all"
-                                                    >
-                                                        <span className="text-sm font-medium text-brand-black group-hover:text-brand-orange">
-                                                            {scene.label}
-                                                        </span>
-                                                    </Link>
-                                                );
-                                            } else {
-                                                // Link Pruning: Render as non-link text for SEO safety
-                                                // Optional: completely hide, but gray text preserves directory structure for UX.
-                                                // User's goal is SEO. Pruning normally means removing the anchor tag.
-                                                return (
-                                                    <div
-                                                        key={scene.slug}
-                                                        className="flex flex-col items-center justify-center p-4 rounded-lg border border-dashed border-gray-100 bg-gray-50/50 cursor-default"
-                                                    >
-                                                        <span className="text-sm font-medium text-gray-300">
-                                                            {scene.label}
-                                                        </span>
-                                                    </div>
-                                                );
-                                            }
+                            // Sort cities within groups
+                            rowKeys.forEach(key => {
+                                grouped[key].sort((a: any, b: any) => normalizeForSort(a.id).localeCompare(normalizeForSort(b.id)));
+                            });
+
+                            return (
+                                <>
+                                    {/* 50-on Index */}
+                                    <div className="flex flex-wrap gap-2 mb-12 p-6 bg-brand-gray-light/30 rounded-xl border border-brand-gray/50">
+                                        <div className="text-sm font-bold text-gray-500 mr-2 py-1">五十音：</div>
+                                        {GOJYUON_ROWS.map((row) => {
+                                            const hasCities = grouped[row.label]?.length > 0;
+                                            if (!hasCities) return (
+                                                <span key={row.label} className="px-3 py-1 text-sm text-gray-300 select-none">
+                                                    {row.label.charAt(0)}
+                                                </span>
+                                            );
+                                            return (
+                                                <a
+                                                    key={row.label}
+                                                    href={`#row-${row.id}`}
+                                                    className="px-3 py-1 text-sm font-medium text-brand-black bg-white border border-brand-gray rounded-md hover:border-brand-orange hover:text-brand-orange transition-colors"
+                                                >
+                                                    {row.label}
+                                                </a>
+                                            );
                                         })}
                                     </div>
-                                </section>
-                            ))
-                        ) : (
-                            <div className="text-center py-12 text-gray-500">
-                                現在、このエリアの登録済みエリアはありません。
-                            </div>
-                        )}
-                    </div>
+
+                                    <div className="space-y-16">
+                                        {rowKeys.map(label => {
+                                            const rowDef = GOJYUON_ROWS.find(r => r.label === label);
+                                            return (
+                                                <div key={label} id={`row-${rowDef?.id}`} className="scroll-mt-24">
+                                                    <h3 className="text-lg font-bold text-gray-400 border-b border-gray-200 pb-2 mb-6">
+                                                        {label}
+                                                    </h3>
+                                                    <div className="space-y-12">
+                                                        {grouped[label].map((city: any) => (
+                                                            <section key={city.id} className="border-b border-gray-100 last:border-0 pb-12 last:pb-0">
+                                                                <h2 className="flex items-center text-xl font-bold text-brand-black mb-6">
+                                                                    <MapPin className="w-5 h-5 text-brand-orange mr-2" />
+                                                                    {city.name}
+                                                                </h2>
+
+                                                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                                                                    {SCENES.map((scene) => {
+                                                                        const key = `${city.id}:${scene.slug}`;
+                                                                        const isValid = validKeys.has(key);
+
+                                                                        if (isValid) {
+                                                                            return (
+                                                                                <Link
+                                                                                    key={scene.slug}
+                                                                                    href={`/rankings/${prefecture}/${city.id}/${scene.slug}`}
+                                                                                    className="group flex flex-col items-center justify-center p-4 rounded-lg border border-gray-100 hover:border-brand-orange/30 hover:bg-brand-orange/5 transition-all"
+                                                                                >
+                                                                                    <span className="text-sm font-medium text-brand-black group-hover:text-brand-orange">
+                                                                                        {scene.label}
+                                                                                    </span>
+                                                                                </Link>
+                                                                            );
+                                                                        } else {
+                                                                            // Link Pruning: Render as non-link text for SEO safety
+                                                                            return (
+                                                                                <div
+                                                                                    key={scene.slug}
+                                                                                    className="flex flex-col items-center justify-center p-4 rounded-lg border border-dashed border-gray-100 bg-gray-50/50 cursor-default"
+                                                                                >
+                                                                                    <span className="text-sm font-medium text-gray-300">
+                                                                                        {scene.label}
+                                                                                    </span>
+                                                                                </div>
+                                                                            );
+                                                                        }
+                                                                    })}
+                                                                </div>
+                                                            </section>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </>
+                            );
+                        })()
+                    ) : (
+                        <div className="text-center py-12 text-gray-500">
+                            現在、このエリアの登録済みエリアはありません。
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

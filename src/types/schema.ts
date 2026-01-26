@@ -15,6 +15,30 @@ export interface UsageScores {
   group: number;    // 団体利用
 }
 
+export interface SakuraAnalysis {
+  score: number;             // 0-100 (Higher = Risky)
+  level: 'safe' | 'gray' | 'danger';
+  reasons: string[];         // ["Rating=5", "No Profile Photo", "Marketing Tone"]
+}
+
+export interface Review {
+  // Basic Info
+  text: string;
+  rating: number;
+  publishTime: string;       // ISO String
+  relativePublishTime: string; // "1週間前"
+
+  // Author Info
+  author: {
+    name: string;
+    photoUri?: string;       // undefined if no photo
+    uri?: string;
+  };
+
+  // AI Analysis Result
+  sakuraAnalysis?: SakuraAnalysis;
+}
+
 
 export interface HotPepperData {
   id: string;
@@ -56,7 +80,11 @@ export interface Place {
     startPrice?: { currencyCode: string; units: string; nanos?: number };
     endPrice?: { currencyCode: string; units: string; nanos?: number };
   };
-  reviews?: string[]; // Array of review texts
+  reviews?: Review[]; // Array of Review Objects
+
+  // Google Places Summaries
+  editorialSummary?: string;
+  reviewSummary?: string; // AI Review Summary
 
   // Location Info
   location?: {
@@ -122,6 +150,8 @@ export interface Place {
   // Semantic Embedding (Vertex AI text-embedding-005)
   embeddingSourceText?: string; // Logic: "[Name] is [Genre] in [Area]. [Tags]. [Summary]"
   embeddingVector?: number[]; // 768-dim vector
+  sakuraPenalty?: number;     // サクラ平均スコアに基づく減点ペナルティ値
+  avgSakuraScore?: number;    // サクラ平均スコア (0.0-5.0). UIバッジ表示用。
 
   // Keep for UI display (optional/derived)
   featureTags?: {

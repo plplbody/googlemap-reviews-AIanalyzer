@@ -61,7 +61,7 @@ export default function SearchInput({ onSearchStart, onSearchComplete }: SearchI
                             if (error) setError('');
                         }}
                         placeholder="例：「新宿 個室居酒屋」「池袋 カフェ」"
-                        className="w-full bg-transparent border-none focus:ring-0 focus:outline-none p-0 text-type-body text-brand-black font-bold placeholder:text-brand-black-light truncate caret-brand-black-light"
+                        className="w-full bg-transparent border-none focus:ring-0 focus:outline-none p-0 text-type-body text-brand-black font-bold placeholder:text-brand-black-light truncate caret-brand-black-light text-center"
                         style={{ transition: 'background-color 5000s ease-in-out 0s' }}
                     />
                 </div>
@@ -69,6 +69,7 @@ export default function SearchInput({ onSearchStart, onSearchComplete }: SearchI
                 {/* 検索ボタン */}
                 <button
                     type="submit"
+                    aria-label="検索"
                     disabled={loading || !query.trim()}
                     className="ml-2 bg-brand-orange-dark hover:bg-brand-orange text-brand-gray-dark p-4 rounded-full transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-brand/50 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 aspect-square h-14 w-14 shrink-0"
                 >

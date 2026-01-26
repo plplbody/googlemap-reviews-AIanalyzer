@@ -32,6 +32,14 @@
 | **G-Impl-02** | General (Impl) | **[SEO] メタデータ未実装**<br>動的な `<title>` や `<meta description>` の生成ロジックが `page.tsx` に存在しない。 | `generateMetadata` を実装し、ページ状態 (List/Detail) に応じて適切なメタタグを出力する。 | **Done** | 実装済 |
 | **G-Impl-03** | General (Impl) | **[SEO] 構造化データ (JSON-LD) 全画面未実装**<br>LP(WebSite) , Detail(Restaurant) 含めすべて未実装。 | 各ビューに応じた JSON-LD コンポーネントを配置する。 | **Done** | 実装済 |
 | **G-Impl-04** | General (Impl) | **[Maint.] Props Drilling (バケツリレー)**<br>`PlaceListView` に25個以上のPropsが渡されており、保守性が極めて低い。 | `UserContext` や `FilterContext` を活用し、末端コンポーネントで直接値を参照するようにリファクタリングする。 | **Done** | Refactoring完了 |
+| **S2-Impl-01** | Scenario 2 (Impl) | **[Perf/Critical] Interaction監視のN+1問題**<br>`ActionButtons` 内で個別に `onSnapshot` を張っており、リスト表示数(N)分のRead/Listenerが発生する。 | `PlaceListView` 等の親階層で一括取得(`getUserInteractions`)し、Context経由で各ボタンに状態を渡す設計に変更する。 | **Resolved** | `useBulkUserInteractions`実装済 |
+| **S2-Impl-02** | Scenario 2 (Impl) | **[UX] 認証ガードがAlert**<br>`handleHeartClick` 内で `alert('ログインが必要です')` を使用しており、UX品質が低い。 | 専用の Auth Modal を表示するか、ログイン画面へリダイレクトするUIコンポーネント連携を実装する。 | **Resolved** | `signInWithGoogle`連携実装済 |
+| **S1-Spec-01** | Scenario 1 (Spec) | **[Test] ソート機能のテスト漏れ**<br>リスト画面にある「AIスコア順/Google評価順」切り替えトグルの操作テストが定義されていない。 | Behavior Check List に「ソート順切り替え」の手順を追加し、並び順の変化を検証する項目を増やす。 | **Resolved** | S1-07追記済 |
+| **S1-Spec-02** | Scenario 1 (Spec) | **[Test] 詳細ナビゲーションのテスト漏れ**<br>詳細画面にある「次の店へ」「前の店へ」ボタンの動作確認が含まれていない。 | 詳細画面での遷移テストステップを追加するか、独立したNavigationテストケースを作成する。 | **Resolved** | S1-09追記済 |
+| **S1-Spec-03** | Scenario 1 (Spec) | **[Test] ホームリセットのテスト漏れ**<br>リスト画面左上の「ホーム」ボタンによる初期化動作の確認がない。 | 検索結果表示後に「ホーム」を押下し、トップ画面（入力クリア状態）に戻ることを確認する手順を追加する。 | **Resolved** | S1-08追記済 |
+| **UI-01** | UI/Design | **[SakuraBadge] グリッド違反**<br>`py-0.5` (2px) が使用されており、8px/4pxグリッドに準拠していない。 | `py-1` (4px) に変更し、高さを整える。 | **Resolved** | |
+| **UI-02** | UI/Design | **[Theme] 配色の一貫性欠如**<br>`SakuraBadge` で `bg-red-100` 等のTailwindデフォルト色が使われている。 | `globals.css` の `brand-red-light` 等を定義・使用し、アプリ全体のトーンに合わせる。 | **Resolved** | `red`, `yellow`系を追加 |
+| **UI-03** | UI/Design | **[Access] タップ領域不足**<br>`PlaceListItem` の「来店済」「メモ編集」ボタンが高さ32px程度しかなく、48px基準を満たしていない。 | パディングを増やすか、ヒットエリア(透明な疑似要素など)を拡大して 48x48px を確保する。 | **Resolved** | `h-12 px-4`を適用 |
 
 ---
 **凡例**:

@@ -30,6 +30,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { profile, loading: profileLoading } = useUserProfile(user);
 
     useEffect(() => {
+        // E2E Test Backdoor (Development Only)
+        if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined') {
+            const e2eSession = localStorage.getItem('E2E_TEST_SESSION');
+            if (e2eSession) {
+                console.log("[E2E] Loading Mock Session");
+                try {
+                    const mockUser = JSON.parse(e2eSession);
+                    setUser(mockUser);
+                    setLoading(false);
+                    return; // Skip Firebase listener
+                } catch (e) {
+                    console.error("[E2E] Invalid Session Data");
+                }
+            }
+        }
+
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             setUser(currentUser);
             setLoading(false);
