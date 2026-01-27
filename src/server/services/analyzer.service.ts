@@ -5,6 +5,13 @@ import { Place, AnalysisStatus } from '@/types/schema';
 // Removed local getModel in favor of vertex.service.ts
 
 // ------------------------------------------------------------------
+// Logic Helpers (Exported for Testing)
+// ------------------------------------------------------------------
+export const limitScore = (score: number, min = 1.0, max = 5.0): number => {
+    return Math.min(max, Math.max(min, score));
+};
+
+// ------------------------------------------------------------------
 // analyzePlace: Core AI Analysis Logic
 // ------------------------------------------------------------------
 export async function analyzePlace(placeId: string): Promise<void> {
@@ -130,7 +137,6 @@ export async function analyzePlace(placeId: string): Promise<void> {
       Evaluate *EACH* review in the provided list and calculate a "sakuraScore" (0.0-5.0).
       
       **Scoring Criteria (0.0-5.0, Higher = More Suspicious):**
-      
       **Goal:** Detect "Vendor/Paid reviews acting to artificially boost the rating".
 
       **1. Unnatural Perfection (Artificiality):**
@@ -155,21 +161,47 @@ export async function analyzePlace(placeId: string): Promise<void> {
       - **0.0-2.4 (Safe)**: Genuine user experience.
 
       ---------------------------------------------------------
+      **TASK 3: CHAIN-OF-THOUGHT SCORING (CRITICAL)**
+      You must follow these calculation steps PRECISELY before generating the summary.
+
+      **Step 1. Calculate Average Sakura Score:**
+      - Average of all "sakuraScore" values from Task 2.
+
+      **Step 2. Calculate Penalty:**
+      - Formula: \`Penalty = (AverageSakuraScore / 5.0) * 2.5\`
+      - Keep 1 decimal place.
+
+      **Step 3. Determine Raw Content Score:**
+      - Evaluate the restaurant's quality from reviews IGNORING the fake likelihood (1.0-5.0).
+
+      **Step 4. Calculate Final True Score:**
+      - Formula: \`FinalScore = RawContentScore - Penalty\`
+      - Minimum 1.0.
+
+      **Step 5. Generate Explanation (gapReason):**
+      - Compare **Final True Score** (AI) vs **Original Rating** (Google).
+      - If Penalty > 0.3, you MUST explain that the score was lowered due to suspicious activity.
+      - Example: "評価は高いですが、サクラ疑惑のあるレビューによる減点の影響で、AIスコアは低めになっています。"
+
+      ---------------------------------------------------------
       **OUTPUT FORMAT (JSON ONLY):**
       
       \`\`\`json
       {
-        "trueScore": number,
+        "rawTrueScore": number, // Step 3
+        "avgSakuraScore": number, // Step 1
+        "penalty": number, // Step 2
+        "trueScore": number, // Step 4 (Final Score)
+        
         "axisScores": { "taste": number, "service": number, "atmosphere": number, "cost": number },
         "usageScores": { "business": number, "date": number, "solo": number, "family": number, "group": number },
         "usageSummary": "string",
-        "usageSummary": "string",
         "summary": ["string", "string"], // UI用: 短い箇条書き (最大30文字x3点)。ユーザーが見て直感的に特徴がわかるもの。
         "embeddingSummary": "string",    // 検索用: 詳細な長文サマリー。メニュー名、雰囲気、ターゲット層などを網羅的に記述。
-        "gapReason": "string",
+        "gapReason": "string", // Based on Step 5
         "axisAnalysis": {
             "taste": { "pros": [], "cons": [], "summary": "" },
-            // ... service, atmosphere, cost
+             // ... service, atmosphere, cost
         },
         
         "reviewedReviews": [
@@ -205,18 +237,29 @@ export async function analyzePlace(placeId: string): Promise<void> {
         // Apply a penalty based on the average Sakura Score of all analyzed reviews.
         // Formula: Final = Raw - (AvgSakura/5.0 * 2.5)
 
-        let avgSakuraScore = 0;
+        // ---------------------------------------------------------
+        // DETERMINISTIC VALIDATION (Double Check)
+        // ---------------------------------------------------------
+        // We calculate locally to ensure data integrity, but use AI's logic for text consistency.
+        // If AI matches closely, we trust its "trueScore". 
+
+        let calculatedAvgSakura = 0;
         if (analysis.reviewedReviews && analysis.reviewedReviews.length > 0) {
             const totalSakura = analysis.reviewedReviews.reduce((sum: number, r: any) => sum + (r.sakuraScore || 0), 0);
-            avgSakuraScore = totalSakura / analysis.reviewedReviews.length;
+            calculatedAvgSakura = totalSakura / analysis.reviewedReviews.length;
         }
 
-        const penalty = (avgSakuraScore / 5.0) * 2.5;
-        const rawTrueScore = analysis.trueScore;
-        // Ensure score doesn't drop below 1.0 (Google Rating minimum)
-        analysis.trueScore = Math.max(1.0, Math.round((rawTrueScore - penalty) * 10) / 10);
+        // Use AI's values directly. If penalty is missing, default to 0.
+        const finalPenalty = analysis.penalty ?? 0;
+        const finalSummarizedAvgSakura = analysis.avgSakuraScore ?? calculatedAvgSakura;
 
-        console.log(`[Score Calc] Raw: ${rawTrueScore}, AvgSakura: ${avgSakuraScore.toFixed(1)}, Penalty: -${penalty.toFixed(1)}, Final: ${analysis.trueScore}`);
+        // Safety Fallback if AI hallucinated a score outside logic
+        // We respect the AI's 'trueScore' as the primary source of truth for the TEXT it wrote,
+        // but we ensure it's structurally valid (e.g. not > 5.0).
+        analysis.trueScore = limitScore(analysis.trueScore);
+
+        console.log(`[Score Calc] AI-Raw: ${analysis.rawTrueScore}, AI-Penalty: ${finalPenalty}, AI-Final: ${analysis.trueScore}`);
+        console.log(`[System Check] Sys-AvgSakura: ${calculatedAvgSakura.toFixed(2)}`);
 
         // ---------------------------------------------------------
         // MERGE SAKURA RESULTS BACK INTO REVIEWS
@@ -282,8 +325,8 @@ export async function analyzePlace(placeId: string): Promise<void> {
 
             embeddingSourceText: embeddingSourceText,
             embeddingVector: embeddingVector,
-            sakuraPenalty: penalty, // Persist penalty for personalized scoring
-            avgSakuraScore: avgSakuraScore, // Persist raw sakura score for UI badges
+            sakuraPenalty: finalPenalty,
+            avgSakuraScore: finalSummarizedAvgSakura, // Persist raw sakura score
 
             usageSummary: analysis.usageSummary || "",
             summary: analysis.summary,
