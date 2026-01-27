@@ -92,8 +92,8 @@ export default function PlaceListItem({
                     <div className="flex justify-start">
                         {viewMode === 'PROFILE' && (
                             <div className="max-w-full">
-                                <div className="p-4 bg-white/95 backdrop-blur-md rounded-xl border border-white/20 shadow-lg flex flex-col gap-4">
-                                    <div className="flex items-center gap-4">
+                                <div className="mb-4 flex flex-col gap-2">
+                                    <div className="flex items-center gap-2">
                                         {/* Visited Toggle */}
                                         {onToggleVisited && (
                                             <button
@@ -128,7 +128,7 @@ export default function PlaceListItem({
                                                     setIsMemoOpen(true);
                                                 }}
                                                 className={`flex items-center gap-2 h-12 px-4 rounded-full shadow-sm border transition-all text-type-button ${memo || repeat
-                                                    ? 'bg-brand-orange-light/50 border-brand-orange-light text-brand-orange-dark'
+                                                    ? 'bg-white border-brand-orange-light text-brand-orange-dark'
                                                     : 'bg-white border-brand-gray text-brand-black-light hover:bg-brand-orange-light/50 hover:border-brand-orange-light hover:text-brand-orange-dark'
                                                     }`}
                                             >
@@ -140,8 +140,8 @@ export default function PlaceListItem({
 
                                     {/* Memo Content Display */}
                                     {(memo || repeat) && isVisited && (
-                                        <div className="border-t border-brand-gray/20 flex flex-col">
-                                            <div className="flex gap-4 text-type-body">
+                                        <div className="bg-white p-2 rounded-md flex flex-col">
+                                            <div className="flex gap-2 text-type-body">
                                                 {repeat && (
                                                     <div className="flex gap-1 shrink-0 items-center">
                                                         {repeat === 'yes' && <span className="px-2 py-1 bg-brand-orange/10 text-brand-orange-dark rounded rounded-md text-type-memo font-bold border border-brand-orange/20 whitespace-nowrap">リピートあり</span>}
