@@ -18,7 +18,7 @@ export function ComparisonTray({ focusedScenes }: ComparisonTrayProps) {
 
     // E2E Testing Helper
     React.useEffect(() => {
-        if (typeof window !== 'undefined') {
+        if (process.env.NEXT_PUBLIC_ENABLE_E2E_MOCK === 'true' && typeof window !== 'undefined') {
             (window as any)._setVerdictTesting = setVerdict;
         }
     }, [setVerdict]);

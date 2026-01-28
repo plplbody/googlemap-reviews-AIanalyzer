@@ -16,40 +16,56 @@ test.describe('TM-U-10/11: Tag Management', () => {
         await page.goto('/settings/tags'); // Assuming this URL or profile/tags
     });
 
-    test.fixme('TM-U-10-01: Tag CRUD', async ({ page }) => {
-        // CREATE
-        const input = page.getByPlaceholder('新しいタグを入力');
-        await input.fill('E2E_Test_Tag');
-        await page.getByRole('button', { name: /追加|作成/ }).click();
+    test('TM-U-10-01: Tag CRUD', async ({ page }) => {
+        // Wait for profile loading
+        await expect(page.getByText('AIタグ管理')).toBeVisible({ timeout: 10000 });
 
-        // Verify content
+        // CREATE
+        await page.getByRole('button', { name: '新しいAIタグを作成する' }).click();
+
+        const input = page.getByPlaceholder(/例:/); // TagCreationForm input
+        await input.fill('E2E_Test_Tag');
+        await page.getByRole('button', { name: '作成する' }).click();
+
+        // Verify creation
         await expect(page.getByText('E2E_Test_Tag')).toBeVisible();
 
         // DELETE
-        // Assuming list item has a delete button
-        const tagItem = page.locator('li').filter({ hasText: 'E2E_Test_Tag' });
-        await tagItem.getByRole('button', { name: /削除|Delete/ }).click();
+        // Handle confirm dialog - must be registered BEFORE clicking
+        page.once('dialog', dialog => dialog.accept());
 
-        // Confirm Dialog if any
-        // If alert/confirm
-        // page.on('dialog', dialog => dialog.accept());
+        const tagCard = page.locator('.group').filter({ hasText: 'E2E_Test_Tag' });
+        await tagCard.getByRole('button', { name: '削除' }).click();
 
+        // Verify deletion
         await expect(page.getByText('E2E_Test_Tag')).not.toBeVisible();
     });
 
-    test.fixme('TM-U-10-02: Duplicate Tag Error', async ({ page }) => {
+    test('TM-U-10-02: Duplicate Tag Error', async ({ page }) => {
+        await expect(page.getByText('AIタグ管理')).toBeVisible({ timeout: 15000 });
+
         // Add once
-        const input = page.getByPlaceholder('新しいタグを入力');
-        await input.fill('Duplicate_Tag');
-        await page.getByRole('button', { name: /追加|作成/ }).click();
-        await expect(page.getByText('Duplicate_Tag')).toBeVisible();
+        await page.getByRole('button', { name: '新しいAIタグを作成する' }).click();
+        const input1 = page.getByPlaceholder(/例:/);
+        await input1.fill('Duplicate_Tag');
+        await page.getByRole('button', { name: '作成する' }).click();
+        await expect(page.getByText('Duplicate_Tag')).toBeVisible({ timeout: 10000 });
 
         // Add again
-        await input.fill('Duplicate_Tag');
-        await page.getByRole('button', { name: /追加|作成/ }).click();
+        await page.getByRole('button', { name: '新しいAIタグを作成する' }).click();
+        const input2 = page.getByPlaceholder(/例:/);
+        await input2.fill('Duplicate_Tag');
 
-        // Verify Error
-        await expect(page.getByText('同じ名前のタグが既に存在します')).toBeVisible();
+        // Handle alert dialog for duplicate error
+        const dialogPromise = page.waitForEvent('dialog');
+        await page.getByRole('button', { name: '作成する' }).click();
+
+        const dialog = await dialogPromise;
+        expect(dialog.message()).toContain('既に存在');
+        await dialog.accept();
+
+        // Wait a bit to ensure it doesn't hang
+        await page.waitForTimeout(500);
     });
 
     test('TM-U-11-01: Learning Feedback Popup', async ({ page }) => {

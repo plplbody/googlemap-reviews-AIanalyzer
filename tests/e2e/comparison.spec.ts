@@ -78,12 +78,16 @@ test.describe('TM-03: Comparison Flow', () => {
 
     test('TM-U-06-01: Verdict Modal Execution & Calculation Display', async ({ page }) => {
         // Setup state: Select 2 items
+        // We select by name to be robust against AI sorting
         const cards = page.locator('.grid > div');
-        await cards.nth(0).getByRole('button', { name: /比較する|選択/ }).click({ force: true });
-        await cards.nth(1).getByRole('button', { name: /比較する|選択/ }).click({ force: true });
+        await expect(cards).toHaveCount(5, { timeout: 10000 });
 
-        // Execute Mock Injection instead of relying on broken Server Action in E2E
-        // We simulate the "Result Returned" state to verify the Modal UI and Score Display.
+        await cards.filter({ hasText: 'Place 1' }).getByRole('button', { name: /比較する|選択/ }).click({ force: true });
+        await cards.filter({ hasText: 'Place 2' }).getByRole('button', { name: /比較する|選択/ }).click({ force: true });
+
+        // Execute Mock Injection
+        await page.waitForFunction(() => (window as any)._setVerdictTesting !== undefined, { timeout: 15000 });
+
         const mockResult = {
             winnerId: 'p1',
             reason: 'Test Reason: 98% Match',
@@ -94,12 +98,6 @@ test.describe('TM-03: Comparison Flow', () => {
             }
         };
 
-        // Wait for helper to be available and then inject
-        // Use a longer timeout for helper availability
-        await page.waitForFunction(() => (window as any)._setVerdictTesting !== undefined, { timeout: 10000 });
-        // Monitor Console
-        // Setup inject
-        await page.waitForFunction(() => (window as any)._setVerdictTesting !== undefined, { timeout: 10000 });
         await page.evaluate((data) => {
             (window as any)._setVerdictTesting(data);
         }, mockResult);
@@ -109,22 +107,15 @@ test.describe('TM-03: Comparison Flow', () => {
         await expect(modal).toBeVisible({ timeout: 10000 });
 
         // Verify Content
-        // 1. Winner Display
         await expect(modal.getByText('あなたとのマッチ度 No.1')).toBeVisible({ timeout: 5000 });
         await expect(modal.getByRole('heading', { name: 'Place 1' })).toBeVisible({ timeout: 5000 });
 
-        // Debug: Check if '0' is displayed (indicating score mismatch)
-        if (await modal.getByText('0', { exact: true }).isVisible()) {
-            console.error('ERROR: Score displayed as 0! Mock injection might be partial.');
-        }
-
-        // 2. Score Match (98%)
-        // Use exact match to avoid strict mode violation (conflicting with "98%" in reason)
+        // Score Match (98% for p1, 45% for p2)
+        // Use exact match to avoid strict mode violation
         await expect(modal.getByText('98', { exact: true })).toBeVisible();
-        // Check "45" for loser
         await expect(modal.getByText('45', { exact: true })).toBeVisible();
 
-        // 3. Close Modal
+        // Close Modal
         await modal.getByRole('button', { name: '閉じる' }).click();
         await expect(modal).not.toBeVisible();
     });

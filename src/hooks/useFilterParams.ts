@@ -25,28 +25,28 @@ export function useFilterParams() {
   useEffect(() => {
     const focusParam = searchParams.get("focus");
     const axes = focusParam ? focusParam.split(",").filter(Boolean) : [];
-    
+
     const sceneParam = searchParams.get("scenes");
     const scenes = sceneParam ? sceneParam.split(",").filter(Boolean) : [];
 
     const tagsParam = searchParams.get("tags");
     const tags = tagsParam ? tagsParam.split(",").filter(Boolean) : [];
 
-    setFocusedAxes(prev => 
+    setFocusedAxes(prev =>
       (prev.length === axes.length && prev.every(v => axes.includes(v))) ? prev : axes
     );
-    setFocusedScenes(prev => 
+    setFocusedScenes(prev =>
       (prev.length === scenes.length && prev.every(v => scenes.includes(v))) ? prev : scenes
     );
-    setFocusedTags(prev => 
+    setFocusedTags(prev =>
       (prev.length === tags.length && prev.every(v => tags.includes(v))) ? prev : tags
     );
   }, [searchParams]);
 
   // Handler Generators
   const createToggleHandler = useCallback((
-    currentItems: string[], 
-    setItems: (items: string[]) => void, 
+    currentItems: string[],
+    setItems: (items: string[]) => void,
     paramKey: string
   ) => {
     return (itemId: string) => {
@@ -56,7 +56,7 @@ export function useFilterParams() {
       } else {
         newItems = [...currentItems, itemId];
       }
-      
+
       setItems(newItems);
 
       // Sync to URL

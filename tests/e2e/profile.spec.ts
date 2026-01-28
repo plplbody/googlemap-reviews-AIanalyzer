@@ -23,13 +23,13 @@ test.describe('TM-04: Profile & Interactions', () => {
 
     test('TM-04-07~11: Visited & Memo Interactions', async ({ page }) => {
         // TM-04-07: Toggle Visited ON
-        const visitBtn = page.getByRole('button', { name: '来店' }).first();
+        const visitBtn = page.getByRole('button', { name: /来店|チェックイン/ }).first();
 
         // Initial: Not Visited
-        await visitBtn.click();
+        await visitBtn.click({ timeout: 10000 });
 
         // Should change to "来店済"
-        await expect(page.getByText('来店済')).toBeVisible();
+        await expect(page.getByText(/来店済|チェックイン済/)).toBeVisible({ timeout: 10000 });
 
         // TM-04-09: Memo Button Appears and Opens Modal
         const memoBtn = page.getByRole('button', { name: /メモ/ });

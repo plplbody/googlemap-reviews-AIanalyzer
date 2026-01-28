@@ -1,0 +1,12 @@
+﻿
+Running 31 tests using 1 worker
+
+Intercepted Search API
+  笨・  1 [chromium] 窶ｺ tests\e2e\comparison.spec.ts:43:9 窶ｺ TM-03: Comparison Flow 窶ｺ TM-03-01/02/03/05: Selection & Comparison Lifecycle (2.1s)
+Intercepted Search API
+  笨・  2 [chromium] 窶ｺ tests\e2e\comparison.spec.ts:79:9 窶ｺ TM-03: Comparison Flow 窶ｺ TM-U-06-01: Verdict Modal Execution & Calculation Display (1.4s)
+Intercepted Search API
+DEBUG: Checking Card 1 for "驕ｸ謚樔ｸｭ" text removal...
+  笨・  3 [chromium] 窶ｺ tests\e2e\comparison.spec.ts:124:9 窶ｺ TM-03: Comparison Flow 窶ｺ TM-U-05-03: Tray Item Removal (1.3s)
+Intercepted Search API
+  笨・  4 [chromium] 窶ｺ tests\e2e\comparison.spec.ts:169:9 窶ｺ TM-03: Comparison Flow 窶ｺ TM-U-05-02: Selection Limit Check (1.2s)

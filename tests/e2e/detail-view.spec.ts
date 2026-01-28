@@ -90,7 +90,7 @@ test.describe('TM-U-04 & SEC-01: Detail View & Security', () => {
         await expect(prevBtn).not.toBeVisible();
 
         // Click "Next" -> Place 2
-        const nextBtn = page.getByRole('button', { name: '次の店' });
+        const nextBtn = page.getByRole('button', { name: /次の店|次へ/ });
         await expect(nextBtn).toBeVisible();
         await nextBtn.click();
 

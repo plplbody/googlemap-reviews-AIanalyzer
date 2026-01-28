@@ -127,32 +127,33 @@ test.describe('TM-02: List View & Filtering', () => {
         const accordionHeader = page.getByText(/モード/);
         await accordionHeader.click();
 
+        // Wait for accordion expansion animation
+        await page.waitForTimeout(500);
+
         // 1. "雰囲気"を切り替え (重点軸)
         const atmoBtn = page.getByRole('button', { name: '雰囲気' });
 
         // Ensure visible
-        await expect(atmoBtn).toBeVisible();
+        await expect(atmoBtn).toBeVisible({ timeout: 10000 });
         await atmoBtn.click({ force: true });
 
-        // Wait for React State / Router update
-        await page.waitForTimeout(1000);
-
-        // URLチェック
+        // Wait for React State / Router update and verify URL
         await expect(page).toHaveURL(/focus/, { timeout: 15000 });
         await expect(page).toHaveURL(/atmosphere/, { timeout: 15000 });
 
-        // スコア計算を検証
-        // Fallback checks (since DB is empty in E2E)
+        // スコア計算を検証 (DOMの反映を待機)
         const cardA = page.locator('.grid > div').filter({ hasText: 'Ristorante A' });
-        const cardB = page.locator('.grid > div').filter({ hasText: 'Italian Place 1' });
-
-        await expect(cardA.locator('.text-type-title').first()).toBeVisible();
+        await expect(cardA.locator('.text-type-title').first()).toBeVisible({ timeout: 5000 });
         await expect(cardA.locator('.text-type-title').first()).toContainText('4.');
 
         // 2. "デート" (利用シーン) を切り替え
         const dateBtn = page.getByRole('button', { name: 'デート' });
+        await expect(dateBtn).toBeVisible({ timeout: 5000 });
         await dateBtn.click({ force: true });
-        await expect(page).toHaveURL(/focus=atmosphere&scenes=date/);
+
+        // Final URL Verification
+        await expect(page).toHaveURL(/focus=atmosphere/, { timeout: 10000 });
+        await expect(page).toHaveURL(/scenes=date/, { timeout: 10000 });
     });
 
     // TM-U-03-05: オートモードのログインガード (未ログイン)

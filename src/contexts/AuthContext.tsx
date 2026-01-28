@@ -30,8 +30,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { profile, loading: profileLoading } = useUserProfile(user);
 
     useEffect(() => {
-        // E2E Test Backdoor (Development Only)
-        if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined') {
+        // E2E Test Backdoor (Explicitly enabled via env flag)
+        if (process.env.NEXT_PUBLIC_ENABLE_E2E_MOCK === 'true' && typeof window !== 'undefined') {
             const e2eSession = localStorage.getItem('E2E_TEST_SESSION');
             if (e2eSession) {
                 console.log("[E2E] Loading Mock Session");
