@@ -8,7 +8,39 @@ import { Place, AnalysisStatus } from '@/types/schema';
 // Logic Helpers (Exported for Testing)
 // ------------------------------------------------------------------
 export const limitScore = (score: number, min = 1.0, max = 5.0): number => {
+    // Handle non-number or NaN inputs gracefully
+    if (typeof score !== 'number' || isNaN(score)) return min;
     return Math.min(max, Math.max(min, score));
+};
+
+export const normalizeScores = (analysis: any) => {
+    // 1. Normalize True Score
+    analysis.rawTrueScore = analysis.trueScore; // Keep raw
+    analysis.trueScore = limitScore(analysis.trueScore);
+
+    // 2. Normalize Axis Scores
+    if (analysis.axisScores) {
+        analysis.axisScores.taste = limitScore(analysis.axisScores.taste);
+        analysis.axisScores.service = limitScore(analysis.axisScores.service);
+        analysis.axisScores.atmosphere = limitScore(analysis.axisScores.atmosphere);
+        analysis.axisScores.cost = limitScore(analysis.axisScores.cost);
+    } else {
+        // Fallback defaults
+        analysis.axisScores = { taste: 3, service: 3, atmosphere: 3, cost: 3 };
+    }
+
+    // 3. Normalize Usage Scores (0.0 to 5.0)
+    if (analysis.usageScores) {
+        analysis.usageScores.business = limitScore(analysis.usageScores.business, 0.0, 5.0);
+        analysis.usageScores.date = limitScore(analysis.usageScores.date, 0.0, 5.0);
+        analysis.usageScores.solo = limitScore(analysis.usageScores.solo, 0.0, 5.0);
+        analysis.usageScores.family = limitScore(analysis.usageScores.family, 0.0, 5.0);
+        analysis.usageScores.group = limitScore(analysis.usageScores.group, 0.0, 5.0);
+    } else {
+        analysis.usageScores = { business: 0, date: 0, solo: 0, family: 0, group: 0 };
+    }
+
+    return analysis;
 };
 
 // ------------------------------------------------------------------
@@ -253,10 +285,10 @@ export async function analyzePlace(placeId: string): Promise<void> {
         const finalPenalty = analysis.penalty ?? 0;
         const finalSummarizedAvgSakura = analysis.avgSakuraScore ?? calculatedAvgSakura;
 
-        // Safety Fallback if AI hallucinated a score outside logic
+        // Safety Fallback using normalizeScores
         // We respect the AI's 'trueScore' as the primary source of truth for the TEXT it wrote,
         // but we ensure it's structurally valid (e.g. not > 5.0).
-        analysis.trueScore = limitScore(analysis.trueScore);
+        normalizeScores(analysis);
 
         console.log(`[Score Calc] AI-Raw: ${analysis.rawTrueScore}, AI-Penalty: ${finalPenalty}, AI-Final: ${analysis.trueScore}`);
         console.log(`[System Check] Sys-AvgSakura: ${calculatedAvgSakura.toFixed(2)}`);

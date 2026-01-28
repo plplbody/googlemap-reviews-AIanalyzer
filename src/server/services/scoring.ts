@@ -23,10 +23,19 @@ export const vecZero = (dim: number) => new Array(dim).fill(0);
 const dotProduct = (v1: number[], v2: number[]) => v1.reduce((sum, val, i) => sum + (val * (v2[i] || 0)), 0);
 const magnitude = (v: number[]) => Math.sqrt(v.reduce((sum, val) => sum + val * val, 0));
 export const cosineSimilarity = (v1: number[], v2: number[]) => {
+    if (v1.length !== v2.length || v1.length === 0) return 0;
     const m1 = magnitude(v1);
     const m2 = magnitude(v2);
     if (m1 === 0 || m2 === 0) return 0;
     return dotProduct(v1, v2) / (m1 * m2);
+};
+
+// XP Calculation Logic
+import { XP_GAIN } from '@/lib/constants';
+
+export const calculateNewXP = (currentXP: number, type: 'global' | 'tag'): number => {
+    const gain = type === 'global' ? XP_GAIN.GLOBAL_PER_ACTION : XP_GAIN.TAG_PER_ACTION;
+    return currentXP + gain;
 };
 
 export function calculatePlaceScore(

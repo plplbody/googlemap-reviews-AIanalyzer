@@ -6,13 +6,16 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+
+  // New standardized location for external packages
+  serverExternalPackages: [
+    '@google-cloud/tasks',
+    '@google-cloud/vertexai',
+    'google-auth-library',
+    'firebase-admin'
+  ],
+
   experimental: {
-    serverComponentsExternalPackages: [
-      '@google-cloud/tasks',
-      '@google-cloud/vertexai',
-      'google-auth-library',
-      'firebase-admin'
-    ],
     serverActions: {
       allowedOrigins: [
         'xenon-bivouac-479813-u1.web.app',

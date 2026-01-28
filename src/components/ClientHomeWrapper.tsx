@@ -57,6 +57,8 @@ export default function ClientHomeWrapper({
     const query = searchParams.get("q") || initialQuery;
     const placeId = searchParams.get("id");
 
+    console.log(`[ClientHomeWrapper] ViewState: ${viewState}, Query: ${query}, ParamsID: ${placeId}`);
+
     // Global Contexts
     // Note: cachedResults might be empty initially if we are SRR'ing.
     // We should seed the cache? Or just use local state?
@@ -71,7 +73,9 @@ export default function ClientHomeWrapper({
     const [place, setPlace] = useState<Place | null>(initialPlace);
     const [loading, setLoading] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [sortBy, setSortBy] = useState<'ai' | 'google'>('ai');
+
     const [userTags, setUserTags] = useState<UserScenario[]>([]);
 
     // Seed cache on mount if initial data provided and cache empty
@@ -151,8 +155,10 @@ export default function ClientHomeWrapper({
         sortBy
     });
 
-    // Navigation Handlers
-    const handleSearchStart = () => setLoading(true);
+    const handleSearchStart = () => {
+        setLoading(true);
+        setError(null);
+    };
 
     const handleSearchComplete = (newQuery: string) => {
         const params = new URLSearchParams();
@@ -192,6 +198,7 @@ export default function ClientHomeWrapper({
             appendResults(response.places, response.nextPageToken);
         } catch (error) {
             console.error("Failed to load more", error);
+            setError("追加の読み込みに失敗しました");
         } finally {
             setLoadingMore(false);
         }
@@ -227,10 +234,19 @@ export default function ClientHomeWrapper({
                     setLoading(false);
                 } catch (error) {
                     console.error(error);
+                    setError("データの取得に失敗しました。しばらく経ってから再度お試しください。");
                     setLoading(false);
                 }
             } else if (viewState === "DETAIL" && placeId) {
                 if (place && place.id === placeId) return; // Already have place
+
+                // Optimization: Check if place exists in cache
+                const cached = cachedResults.find(p => p.id === placeId) || initialPlaces.find(p => p.id === placeId);
+                if (cached) {
+                    setPlace(cached);
+                    // Optionally fetch fresh data in background if needed, but for now cache is sufficient
+                    return;
+                }
 
                 setLoading(true);
                 try {
@@ -278,6 +294,13 @@ export default function ClientHomeWrapper({
     return (
         <main className="min-h-screen bg-[#FAFAFA] text-[#1A1A1A]  selection:bg-brand-orange-dark/20">
             <Header viewState={viewState} onResetHome={resetHome} />
+
+            {error && (
+                <div className="fixed top-24 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 bg-red-500 text-white font-bold rounded-full shadow-lg animate-in fade-in slide-in-from-top-4">
+                    {error}
+                    <button onClick={() => setError(null)} className="ml-4 opacity-80 hover:opacity-100">✕</button>
+                </div>
+            )}
 
             {viewState === "HOME" && (
                 <>

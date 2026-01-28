@@ -16,6 +16,13 @@ export function ComparisonTray({ focusedScenes }: ComparisonTrayProps) {
     const { user, signInWithGoogle } = useAuth();
     const { selectedPlaces, toggleSelection, clearSelection, currentLimit, isComparing, setIsComparing, setVerdict } = useComparison();
 
+    // E2E Testing Helper
+    React.useEffect(() => {
+        if (typeof window !== 'undefined') {
+            (window as any)._setVerdictTesting = setVerdict;
+        }
+    }, [setVerdict]);
+
     const handleCompare = async () => {
         if (!user) {
             signInWithGoogle();
@@ -63,6 +70,7 @@ export function ComparisonTray({ focusedScenes }: ComparisonTrayProps) {
                                         <button
                                             onClick={() => toggleSelection(place)}
                                             className="absolute -top-2 -right-2 bg-gray-800 text-brand-gray-dark rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 z-10"
+                                            aria-label="削除"
                                         >
                                             <X size={14} />
                                         </button>

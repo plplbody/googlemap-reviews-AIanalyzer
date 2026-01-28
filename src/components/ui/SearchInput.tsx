@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Loader2 } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 
 interface SearchInputProps {
     onSearchStart: () => void;
@@ -9,9 +10,20 @@ interface SearchInputProps {
 }
 
 export default function SearchInput({ onSearchStart, onSearchComplete }: SearchInputProps) {
-    const [query, setQuery] = useState('');
+    const searchParams = useSearchParams();
+    const initialQuery = searchParams.get('q') || searchParams.get('query') || '';
+
+    const [query, setQuery] = useState(initialQuery);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+
+    // Update query if URL changes externally (e.g. back button)
+    useEffect(() => {
+        const q = searchParams.get('q') || searchParams.get('query') || '';
+        if (q && q !== query) {
+            setQuery(q);
+        }
+    }, [searchParams]);
 
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -55,6 +67,7 @@ export default function SearchInput({ onSearchStart, onSearchComplete }: SearchI
                     <input
                         id="search"
                         type="text"
+                        maxLength={100}
                         value={query}
                         onChange={(e) => {
                             setQuery(e.target.value);

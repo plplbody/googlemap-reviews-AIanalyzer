@@ -6,18 +6,18 @@ test.describe('TM-01: Search & Hero Area', () => {
     });
 
     test('TM-01-01: Hero Content Visibility', async ({ page }) => {
-        await expect(page.getByRole('heading', { name: /Google Map口コミ/i })).toBeVisible();
-        await expect(page.getByText(/本当の名店を見つけよう/i)).toBeVisible();
+        await expect(page.getByRole('heading', { name: /AIグルメコンシェルジュ/i })).toBeVisible();
+        await expect(page.getByText(/あなた専属の/i)).toBeVisible();
     });
 
     test('TM-01-02/03/08: Input Validation & Button State', async ({ page }) => {
         const input = page.getByRole('textbox', { name: '検索' });
         const submitBtn = page.getByRole('button', { name: /search|検索/i });
 
-        // Initial state: Empty, button disabled? (depending on impl, usually enabled but triggers validation)
-        await submitBtn.click();
-        // Should stay on home or show error
-        await expect(page).toHaveURL('/');
+        // Initial state: Empty, button should be disabled
+        await expect(submitBtn).toBeDisabled();
+
+        // Cannot click, so URL check is implicitly satisfied as we can't navigate
 
         // Type short query
         await input.fill('ラーメン');

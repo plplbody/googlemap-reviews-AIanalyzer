@@ -5,7 +5,9 @@ import { UserInteraction, UserProfile, UserScenario } from '@/types/user';
 import { Place } from '@/types/schema';
 import { FieldValue } from 'firebase-admin/firestore';
 import { serializePlace } from '@/lib/utils/serialization';
-import { blendPreferences } from '../services/scoring';
+import { blendPreferences, calculateNewXP } from '../services/scoring';
+import { XP_GAIN } from '@/lib/constants';
+
 
 const db = getFirestore();
 
@@ -228,7 +230,7 @@ export async function submitEvaluation(
                             const log: any = { axisImpact: {}, embeddingImpact: [] };
 
                             // Usage XP
-                            scState.experience += 50; // +50 Tag XP (N=20 to Master)
+                            scState.experience = calculateNewXP(scState.experience, 'tag');
 
                             // Apply Axis
                             (['taste', 'service', 'atmosphere', 'cost'] as const).forEach(key => {
@@ -253,7 +255,7 @@ export async function submitEvaluation(
             }
 
             if (direction !== 0) {
-                nextGlobalExperience += 20; // +20 Global XP (N=50 to Master)
+                nextGlobalExperience = calculateNewXP(nextGlobalExperience, 'global');
             }
         }
 

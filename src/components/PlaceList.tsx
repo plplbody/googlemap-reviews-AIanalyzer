@@ -41,43 +41,55 @@ export default function PlaceList({ places, onSelect, onLoadMore, hasMore, loadi
                     </button>
                 )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                {places.map((place) => (
-                    <PlaceListItem
-                        key={place.id}
-                        place={place}
-                        onSelect={onSelect}
-                        focusedAxes={focusedAxes}
-                        focusedScenes={focusedScenes}
-                        personalizedScore={
-                            personalizedScores?.[place.id]?.finalScore ?? place.trueScore
-                        }
-                        onActionComplete={onActionComplete}
-                        initialInteraction={interactionStatusMap?.[place.id]}
-                    />
-                ))}
-            </div>
 
-            {hasMore && (
-                <div className="flex justify-center mt-8 pb-12">
-                    <button
-                        onClick={onLoadMore}
-                        disabled={loadingMore}
-                        className="px-8 py-3 bg-white border border-brand-gray text-brand-black font-medium rounded-full hover:bg-brand-gray-light hover:border-brand-orange-dark hover:text-brand-orange-dark transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                        {loadingMore ? (
-                            <>
-                                <div className="w-4 h-4 border-2 border-brand-black-light border-t-transparent rounded-full animate-spin" />
-                                読み込み中...
-                            </>
-                        ) : (
-                            <>
-                                もっと見る
-                            </>
-                        )}
-                    </button>
-                </div>
-            )}
-        </div>
+            {
+                places.length === 0 ? (
+                    <div className="flexflex-col items-center justify-center py-20 text-center">
+                        <p className="text-xl font-bold text-brand-gray-dark mb-2">条件に一致するお店が見つかりませんでした</p>
+                        <p className="text-brand-gray">検索ワードや条件を変更して再度お試しください</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                        {places.map((place) => (
+                            <PlaceListItem
+                                key={place.id}
+                                place={place}
+                                onSelect={onSelect}
+                                focusedAxes={focusedAxes}
+                                focusedScenes={focusedScenes}
+                                personalizedScore={
+                                    personalizedScores?.[place.id]?.finalScore ?? place.trueScore
+                                }
+                                onActionComplete={onActionComplete}
+                                initialInteraction={interactionStatusMap?.[place.id]}
+                            />
+                        ))}
+                    </div>
+                )
+            }
+
+            {
+                hasMore && (
+                    <div className="flex justify-center mt-8 pb-12">
+                        <button
+                            onClick={onLoadMore}
+                            disabled={loadingMore}
+                            className="px-8 py-3 bg-white border border-brand-gray text-brand-black font-medium rounded-full hover:bg-brand-gray-light hover:border-brand-orange-dark hover:text-brand-orange-dark transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                            {loadingMore ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-brand-black-light border-t-transparent rounded-full animate-spin" />
+                                    読み込み中...
+                                </>
+                            ) : (
+                                <>
+                                    もっと見る
+                                </>
+                            )}
+                        </button>
+                    </div>
+                )
+            }
+        </div >
     );
 }

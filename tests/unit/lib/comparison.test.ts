@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cosineSimilarity } from '@/lib/comparison';
+import { cosineSimilarity } from '@/server/services/scoring';
 
 /**
  * @file comparison.test.ts
