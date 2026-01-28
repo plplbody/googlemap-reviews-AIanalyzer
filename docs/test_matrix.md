@@ -109,6 +109,8 @@ $env:USE_MOCK_DATA="true"; $env:PORT="3005"; npx playwright test tests/e2e
 |:---|:---|:---|:---|:---|:---|:---|:---|
 | **U-19** | **SEO Controller** | `JsonLd` | **TM-U-19-01** | **正常系** | **構造化データ出力** | DOM内を確認する | `application/ld+json` が出力され、Schema.org準拠の正しいJSON（ItemList/Restaurant）が含まれていること |
 | **G-01** | **Error Handling** | `GlobalError` | **異常系** | **404ページ** | 存在しないURLパスにアクセスする | ソフト404ではなく、正しい404エラーページが表示されること |
+| **S-01** | **App Check** | `Firebase` | **TM-S-01-01** | **異常系** | **トークンなしアクセス拒否** | App Checkトークンを持たない(または無効な)リクエストを送信する | Firestoreによってリクエストが拒否されること |
+| **S-01** | **App Check** | `Firebase` | **TM-S-01-02** | **正常系** | **デバッグトークン同期** | 開発環境において、特定のデバッグトークンを使用する | 正常にデータ取得ができること |
 
 ---
 

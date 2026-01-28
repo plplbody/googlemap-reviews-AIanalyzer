@@ -72,6 +72,24 @@ Authenticationの次は、データベースを有効化します。
 4.  **Security Rules**: 「本番環境モード (Production mode)」を選択して作成。
     *   *最初はすべて拒否されますが、後ほどの手順でローカルの `firestore.rules` をデプロイして上書きするため問題ありません。*
 
+### 2.4. Firebase App Check の設定 (DoS対策)
+不正なクライアントからのアクセスを遮断し、Firestoreの高額請求攻撃を防止します。
+
+1.  **reCAPTCHA Enterprise の登録**:
+    *   GCPコンソールで "reCAPTCHA Enterprise" を開き、「サイトキーを作成」をクリック。
+    *   **表示名**: `AI-Concierge-Web` 等。
+    *   **プラットフォームの種類**: "ウェブ" を選択。
+    *   **ドメイン名**: 本番用ドメインを追加。
+2.  **Firebase Console での有効化**:
+    *   メニュー **Build > App Check** > 「始める」。
+    *   **Apps** タブで対象のWebアプリを選択し、**reCAPTCHA Enterprise** を登録。
+    *   先ほど作成したサイトキーを紐付けます。
+3.  **適用 (Enforcement) の開始**:
+    *   Cloud Firestore の設定で「適用」をクリックします。これにより、有効な App Check トークンを持たないリクエストが拒否されるようになります。
+
+> [!CAUTION]
+> **デバッグトークンの必要性**: ローカル開発環境では `reCAPTCHA` が動作しないため、Firebase Console で「デバッグ トークンを管理」からトークンを発行し、コード内で設定（`self.FIREBASE_APPCHECK_DEBUG_TOKEN = true` 等）する必要があります。
+
 ## 3. 本番環境変数の準備
 
 Cloud Runに設定する環境変数を準備します。
@@ -88,6 +106,7 @@ Cloud Runに設定する環境変数を準備します。
 | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | 同上 |
 | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | 同上 |
 | `NEXT_PUBLIC_FIREBASE_APP_ID` | 同上 |
+| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | reCAPTCHA Enterprise で作成したサイトキー |
 | `CRON_SECRET` | 任意の文字列（バッチAPI認証用） |
 
 > [!NOTE]
