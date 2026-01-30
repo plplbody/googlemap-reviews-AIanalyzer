@@ -5,8 +5,9 @@ import { Buffer } from 'buffer';
 
 export async function enqueueAnalysis(placeId: string) {
     const isDev = process.env.NODE_ENV === 'development';
+    const forceCloudTasks = process.env.USE_CLOUD_TASKS === 'true';
 
-    if (isDev) {
+    if (isDev && !forceCloudTasks) {
         console.log(`[Local] Enqueuing analysis for ${placeId} directly.`);
         try {
             await analyzePlace(placeId);

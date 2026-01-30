@@ -236,19 +236,24 @@ export async function analyzePlace(placeId: string): Promise<void> {
              // ... service, atmosphere, cost
         },
         
-        "reviewedReviews": [
-            {
-                "sakuraScore": number,
-                "level": "safe" | "gray" | "danger",
-                "reasons": ["string", "string"] // e.g., ["具体性なし", "プロフ画像なし", "宣伝口調"]
-            }
-        ]
+        "axisAnalysis": {
+            "taste": { "pros": [], "cons": [], "summary": "" },
+             // ... service, atmosphere, cost
+        }
       }
       \`\`\`
     `;
 
         const result = await getGenerativeModel().generateContent(prompt);
         const response = result.response;
+
+        if (response.usageMetadata) {
+            console.log(`[Token Usage] Place: ${placeId}`);
+            console.log(`  Prompt: ${response.usageMetadata.promptTokenCount}`);
+            console.log(`  Output: ${response.usageMetadata.candidatesTokenCount}`);
+            console.log(`  Total : ${response.usageMetadata.totalTokenCount}`);
+        }
+
         const text = response.candidates?.[0].content.parts[0].text;
 
         if (!text) throw new Error("No response from Gemini");
@@ -275,19 +280,21 @@ export async function analyzePlace(placeId: string): Promise<void> {
         // We calculate locally to ensure data integrity, but use AI's logic for text consistency.
         // If AI matches closely, we trust its "trueScore". 
 
-        let calculatedAvgSakura = 0;
-        if (analysis.reviewedReviews && analysis.reviewedReviews.length > 0) {
-            const totalSakura = analysis.reviewedReviews.reduce((sum: number, r: any) => sum + (r.sakuraScore || 0), 0);
-            calculatedAvgSakura = totalSakura / analysis.reviewedReviews.length;
-        }
+        // ---------------------------------------------------------
+        // DETERMINISTIC VALIDATION (Double Check)
+        // ---------------------------------------------------------
+        // We calculate locally to ensure data integrity, but use AI's logic for text consistency.
+        // If AI matches closely, we trust its "trueScore". 
+
+        // Since we optimized prompt to NOT return per-review scores (Cost Reduction),
+        // we rely solely on AI's 'avgSakuraScore'.
+        const calculatedAvgSakura = analysis.avgSakuraScore || 0;
 
         // Use AI's values directly. If penalty is missing, default to 0.
         const finalPenalty = analysis.penalty ?? 0;
-        const finalSummarizedAvgSakura = analysis.avgSakuraScore ?? calculatedAvgSakura;
+        const finalSummarizedAvgSakura = analysis.avgSakuraScore ?? 0;
 
         // Safety Fallback using normalizeScores
-        // We respect the AI's 'trueScore' as the primary source of truth for the TEXT it wrote,
-        // but we ensure it's structurally valid (e.g. not > 5.0).
         normalizeScores(analysis);
 
         console.log(`[Score Calc] AI-Raw: ${analysis.rawTrueScore}, AI-Penalty: ${finalPenalty}, AI-Final: ${analysis.trueScore}`);
@@ -296,38 +303,8 @@ export async function analyzePlace(placeId: string): Promise<void> {
         // ---------------------------------------------------------
         // MERGE SAKURA RESULTS BACK INTO REVIEWS
         // ---------------------------------------------------------
-        // We need to map the analysis results back to the original full review objects
-        // Assumption: The 'reviewedReviews' array corresponds 1:1 to 'reviewsForPrompt'.
-
-        let updatedReviews: Place['reviews'] = [];
-        if (placeData.reviews) {
-            // We only analyzed 'validReviews'. We need to be careful with indexing.
-            // Actually, it's safer to just iterate the 'validReviews' and merge.
-            // For 'excludedReviews', we leave sakuraAnalysis undefined or set a default.
-
-            let promptIndex = 0;
-            const MIN_REVIEW_LENGTH = 15; // Re-declare for scope scope
-
-            updatedReviews = placeData.reviews.map(r => {
-                if (r.text.length >= MIN_REVIEW_LENGTH) {
-                    // This review was analyzed
-                    const result = analysis.reviewedReviews?.[promptIndex];
-                    promptIndex++;
-
-                    if (result) {
-                        return {
-                            ...r,
-                            sakuraAnalysis: {
-                                score: result.sakuraScore,
-                                level: result.level,
-                                reasons: result.reasons
-                            }
-                        };
-                    }
-                }
-                return r; // Return as is if skipped or no result
-            });
-        }
+        // Skip per-review merging in Cost Optimized Mode.
+        const updatedReviews = placeData.reviews; // No individual tagging
 
         // ---------------------------------------------------------
         // 5. Generate Embedding Source Text & Vector (Vertex AI)
@@ -371,12 +348,22 @@ export async function analyzePlace(placeId: string): Promise<void> {
 
         console.log(`Analysis completed for place: ${placeId}`);
 
+        // ------------------------------------------------------------------
+        // ERROR HANDLING & RETRY PREVENTION
+        // ------------------------------------------------------------------
+        // If JSON parsing fails, Cloud Tasks would normally retry.
+        // We catch it here, mark as error, and DO NOT THROW to stop retries.
     } catch (error) {
         console.error(`Analysis failed for place: ${placeId}`, error);
+
+        // Mark as error in DB
         await getFirestore().collection('places').doc(placeId).update({
             status: 'error',
             updatedAt: new Date(),
         });
-        throw error;
+
+        // CRITICAL: Return normally to stop Cloud Tasks from retrying 
+        // (unless it's a transient network error we specifically want to retry, but for now safety first)
+        return;
     }
 }

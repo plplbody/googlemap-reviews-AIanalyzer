@@ -6,6 +6,11 @@ const LIMIT_COUNT = Number(process.env.RATE_LIMIT_COUNT) || 20; // Max requests 
 const WINDOW_MS = 60 * 1000; // 1 minute
 
 export async function checkRateLimit(): Promise<void> {
+    // E2E/Dev Bypass
+    if (process.env.NEXT_PUBLIC_ENABLE_E2E_MOCK === 'true') {
+        return;
+    }
+
     const headersList = await headers();
     // Get IP from typical proxy headers or fallback
     const ip = headersList.get('x-forwarded-for')?.split(',')[0] || 'unknown';
